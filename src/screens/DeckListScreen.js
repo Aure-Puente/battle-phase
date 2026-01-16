@@ -298,7 +298,7 @@ export default function DeckListScreen({ route, navigation }) {
                       <MaterialCommunityIcons
                         name="trash-can-outline"
                         size={18}
-                        color={theme.colors.error}
+                        color={theme.colors.secondary}
                       />
                     </Pressable>
                   </View>

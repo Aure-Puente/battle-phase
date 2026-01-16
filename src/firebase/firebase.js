@@ -1,10 +1,10 @@
-// Import the functions you need from the SDKs you need
+// firebase.js
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyC4uDvmg7Jo9m06yNzpxJbaQBMRp5i_OG0",
   authDomain: "yu-gi-oh-app-adc63.firebaseapp.com",
@@ -17,7 +17,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// ✅ Auth con persistencia (mantiene sesión iniciada)
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
 // 👉 Exportamos lo que va a usar la app
-export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

@@ -8,8 +8,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import EstadisticasScreen from "../screens/EstadisticasScreen";
 import HistorialScreen from "../screens/HistorialScreen";
 import InicioScreen from "../screens/InicioScreen";
-import TorneoScreen from "../screens/TorneoScreen";
 import DecksStack from "./DecksStack";
+import TorneoStack from "./TorneoStack";
 
 const Tab = createBottomTabNavigator();
 
@@ -140,7 +140,7 @@ export default function AppTabs() {
 
       <Tab.Screen
         name="Torneo"
-        component={TorneoScreen}
+        component={TorneoStack}
         options={{
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="trophy" color={color} size={28} />
