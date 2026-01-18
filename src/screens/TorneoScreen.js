@@ -1,3 +1,6 @@
+//Importaciones:
+import { collection, doc, onSnapshot, query, where, writeBatch } from "firebase/firestore";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { useEffect, useMemo, useState } from "react";
 import { Image, ScrollView, View } from "react-native";
 import {
@@ -13,11 +16,9 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-
-import { collection, doc, onSnapshot, query, where, writeBatch } from "firebase/firestore";
-import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { db, storage } from "../firebase/firebase";
 
+//JS:
 const PLAYERS = [
   { key: "aure", label: "Aure", uid: "sW53hw9EdVXDIJMI3BnPTcYRbAn1", icon: "account-star-outline" },
   { key: "benja", label: "Benja", uid: "VTo2TZ93t7WQANYP9Fao2sFEops1", icon: "lightning-bolt-outline" },
@@ -95,7 +96,6 @@ function PlayerHeader({ theme, label, icon, count }) {
       >
         <MaterialCommunityIcons name={icon} size={18} color={theme.colors.primary} />
         <Text style={{ fontWeight: "900" }}>{label}</Text>
-        {/* ✅ ahora muestra SOLO decks habilitados */}
         <Chip compact style={chipStyle} textStyle={chipText}>
           {count}
         </Chip>
@@ -167,28 +167,18 @@ function StepItem({ item, theme, onPress, selected }) {
             </View>
           </View>
 
-          <Lives lives={lives} theme={theme} />
+          
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
           <Chip compact icon="sword" style={chipStyle} textStyle={chipText}>
             {typeof item.power === "number" ? `Fuerza: ${item.power}` : "Fuerza: —"}
           </Chip>
+            <View style={{justifyContent: "center", alignItems: "center", gap:5}}>
+            <Text style={{fontWeight: "900" }}>Vidas</Text>
+            <Lives lives={lives} theme={theme} />
+            </View>
 
-          {item.isCurrentChampion ? (
-            <Chip compact icon="crown" style={chipStyle} textStyle={chipText}>
-              Ganador sigue
-            </Chip>
-          ) : (
-            <Chip compact icon="heart-multiple" style={chipStyle} textStyle={chipText}>
-              2 vidas
-            </Chip>
-          )}
-          {eliminated ? (
-            <Chip compact icon="skull" style={chipStyle} textStyle={chipText}>
-              Eliminado
-            </Chip>
-          ) : null}
         </View>
       </Card.Content>
     </Card>
@@ -198,15 +188,11 @@ function StepItem({ item, theme, onPress, selected }) {
 export default function TorneoScreen({ navigation }) {
   const theme = useTheme();
   const { chipStyle, chipText } = useChipStyles(theme);
-
   const [loading, setLoading] = useState(true);
   const [decks, setDecks] = useState([]);
   const [picked, setPicked] = useState([]);
-
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
-
-  // ✅ acordeón reglas
   const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
@@ -294,7 +280,10 @@ export default function TorneoScreen({ navigation }) {
     }
 
     const sortWithin = (arr) => {
-      const withPower = arr.filter((d) => typeof d.power === "number").sort((a, b) => a.power - b.power);
+      const withPower = arr
+  .filter((d) => typeof d.power === "number")
+  .sort((a, b) => b.power - a.power);
+
       const withoutPower = arr
         .filter((d) => typeof d.power !== "number")
         .sort((a, b) => (a._t || 0) - (b._t || 0));
@@ -303,7 +292,7 @@ export default function TorneoScreen({ navigation }) {
 
     return PLAYERS.map((p) => {
       const decksPlayer = sortWithin(byUid[p.uid] || []);
-      const activeCount = decksPlayer.filter((d) => !(d.lives <= 0 || d.eliminated)).length; // ✅ cuenta habilitados
+      const activeCount = decksPlayer.filter((d) => !(d.lives <= 0 || d.eliminated)).length; 
       return { player: p, decks: decksPlayer, activeCount };
     });
   }, [decks]);
@@ -355,8 +344,6 @@ export default function TorneoScreen({ navigation }) {
         <Text variant="headlineMedium" style={{ fontWeight: "900" }}>
           Torneo
         </Text>
-
-        {/* ✅ nombre del torneo más grande y protagonista */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <MaterialCommunityIcons name="sword-cross" size={18} color={theme.colors.primary} />
           <Text variant="titleLarge" style={{ fontWeight: "900", color: theme.colors.onSurface }}>
@@ -389,7 +376,6 @@ export default function TorneoScreen({ navigation }) {
         }}
       >
         <Card.Content style={{ paddingTop: 16, gap: 12 }}>
-          {/* ✅ “Torneo actual” ahora se ve como header + torneo grande */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <MaterialCommunityIcons name="trophy" size={22} color={theme.colors.primary} />
 
@@ -407,7 +393,6 @@ export default function TorneoScreen({ navigation }) {
             </Chip>
           </View>
 
-          {/* ✅ Reglas como acordeón (cerrado por defecto) */}
           <View
             style={{
               borderRadius: 16,
@@ -488,7 +473,6 @@ export default function TorneoScreen({ navigation }) {
               <View style={{ gap: 14, marginTop: 4 }}>
                 {grouped.map(({ player, decks, activeCount }) => (
                   <View key={player.uid} style={{ gap: 10 }}>
-                    {/* ✅ count ahora baja cuando un deck se elimina */}
                     <PlayerHeader theme={theme} label={player.label} icon={player.icon} count={activeCount} />
 
                     {decks.length === 0 ? (
@@ -542,14 +526,13 @@ export default function TorneoScreen({ navigation }) {
         </Card.Content>
       </Card>
 
-      {/* ✅ Modal reiniciar: colores del theme + menos redondeado */}
       <Portal>
         <Dialog
           visible={resetOpen}
           onDismiss={() => setResetOpen(false)}
           style={{
             backgroundColor: theme.colors.surface,
-            borderRadius: 12, // menos redondeado
+            borderRadius: 12, 
             borderWidth: 1,
             borderColor: theme.colors.outline,
           }}

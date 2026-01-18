@@ -1,13 +1,13 @@
+//Importaciones:
 import { useMemo, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, View } from "react-native";
 import { Card, Chip, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
+//JS:
 export default function HistorialScreen() {
   const theme = useTheme();
   const [openImage, setOpenImage] = useState(false);
-
-  // ✅ estilos de chips consistentes con el theme Duel Links
   const chipStyle = useMemo(
     () => ({
       backgroundColor: theme.colors.surfaceVariant,
@@ -45,7 +45,6 @@ export default function HistorialScreen() {
 
   return (
     <>
-      {/* ✅ Modal de imagen grande */}
       <Modal
         visible={openImage}
         transparent
@@ -137,7 +136,7 @@ export default function HistorialScreen() {
           </View>
         </View>
 
-        {/* ✅ Torneo finalizado */}
+        {/* Torneo finalizado */}
         <Card
           mode="contained"
           style={{
@@ -275,7 +274,7 @@ export default function HistorialScreen() {
                   borderColor: theme.colors.outline,
                 }}
               >
-                {/* ✅ Imagen tocable */}
+                {/*  Imagen tocable */}
                 <Pressable
                   onPress={() => setOpenImage(true)}
                   style={{
@@ -317,7 +316,7 @@ export default function HistorialScreen() {
           </Card.Content>
         </Card>
 
-        {/* ✅ Torneo actual */}
+        {/* Torneo actual */}
         <Card
           mode="contained"
           style={{

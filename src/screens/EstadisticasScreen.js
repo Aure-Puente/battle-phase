@@ -1,3 +1,4 @@
+//Importaciones:
 import { collection, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -5,10 +6,7 @@ import { Card, Chip, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { db } from "../firebase/firebase";
 
-/**
- * ✅ Reemplazá estos UID por los reales
- * (los mismos que usás en DecksScreen)
- */
+//JS:
 const PLAYERS = [
   { key: "aure", label: "Aure", uid: "sW53hw9EdVXDIJMI3BnPTcYRbAn1" },
   { key: "rami", label: "Rami", uid: "mFXk9M3WnOgTvtSnjlUQqz1TDsa2" },
@@ -23,7 +21,6 @@ export default function EstadisticasScreen() {
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ listener en tiempo real de TODOS los decks
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, "decks"),
@@ -38,7 +35,6 @@ export default function EstadisticasScreen() {
     return unsub;
   }, []);
 
-  // ✅ stats por jugador (promedio de fuerza)
   const stats = useMemo(() => {
     const byUid = new Map();
     PLAYERS.forEach((p) => {
@@ -66,7 +62,6 @@ export default function EstadisticasScreen() {
       }
     }
 
-    // calcular promedios
     const result = PLAYERS.map((p) => {
       const row = byUid.get(p.uid);
       const avg = row.decksConFuerza > 0 ? row.sumFuerza / row.decksConFuerza : 0;
@@ -79,8 +74,7 @@ export default function EstadisticasScreen() {
     return result;
   }, [decks]);
 
-  // ✅ para barras: asumimos fuerza 0..10 (como dijiste)
-  const maxScale = 10;
+  const maxScale = 100;
 
   return (
     <View
@@ -164,7 +158,7 @@ export default function EstadisticasScreen() {
                 size={20}
                 color={theme.colors.primary}
               />
-              <Text style={{ fontWeight: "800" }}>Promedio de fuerza (0 a 10)</Text>
+              <Text style={{ fontWeight: "800" }}>Promedio de fuerza (0 a 100)</Text>
             </View>
 
             {stats.map((row) => {
@@ -176,7 +170,7 @@ export default function EstadisticasScreen() {
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                     <Text style={{ fontWeight: "900", flex: 1 }}>{row.label}</Text>
                     <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                      {row.avg.toFixed(1)} / 10
+                      {row.avg.toFixed(1)} / 100
                     </Text>
                   </View>
 

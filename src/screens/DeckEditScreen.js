@@ -1,3 +1,4 @@
+//Importaciones:
 import * as ImagePicker from "expo-image-picker";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -6,6 +7,7 @@ import { Image, ScrollView, View } from "react-native";
 import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { auth, db, storage } from "../firebase/firebase";
 
+//JS:
 const onlyNumber = (v) => String(v || "").replace(/[^\d]/g, "");
 
 async function pickImage() {
@@ -38,15 +40,12 @@ export default function DeckEditScreen({ route, navigation }) {
   const [nombre, setNombre] = useState("");
   const [fuerza, setFuerza] = useState("");
 
-  // imágenes: guardamos uri local si elige otra
-  const [insigniaLocal, setInsigniaLocal] = useState(null); // { uri }
+  const [insigniaLocal, setInsigniaLocal] = useState(null); 
   const [arquetipoLocal, setArquetipoLocal] = useState(null);
 
-  // urls actuales en DB
   const [insigniaUrl, setInsigniaUrl] = useState(null);
   const [arquetipoUrl, setArquetipoUrl] = useState(null);
 
-  // flags de “quitar”
   const [removeInsignia, setRemoveInsignia] = useState(false);
   const [removeArquetipo, setRemoveArquetipo] = useState(false);
 
@@ -68,8 +67,6 @@ export default function DeckEditScreen({ route, navigation }) {
       (snap) => {
         const data = snap.data();
         if (!data) return;
-
-        // seguridad básica: solo dueño edita (aunque reglas ya lo controlan)
         if (data.ownerUid && user?.uid && data.ownerUid !== user.uid) {
           navigation.goBack();
           return;
@@ -141,7 +138,6 @@ export default function DeckEditScreen({ route, navigation }) {
 
       const basePath = `decks/${user.uid}/${deckId}`;
 
-      // Si pide quitar imágenes, borramos del storage (best-effort)
       if (removeInsignia) {
         await Promise.allSettled([deleteObject(ref(storage, `${basePath}/insignia.jpg`))]);
         setInsigniaUrl(null);
@@ -151,7 +147,6 @@ export default function DeckEditScreen({ route, navigation }) {
         setArquetipoUrl(null);
       }
 
-      // Si eligió nuevas imágenes, las subimos y obtenemos url
       let newInsigniaUrl = insigniaUrl;
       let newArquetipoUrl = arquetipoUrl;
 
@@ -199,7 +194,7 @@ export default function DeckEditScreen({ route, navigation }) {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 12 }}>
-        <Text variant="headlineMedium">Editar Deck</Text>
+        <Text variant="headlineMedium" style={{ fontWeight: "900" }}>Editar Deck</Text>
 
         <Card mode="contained">
           <Card.Content style={{ gap: 12 }}>

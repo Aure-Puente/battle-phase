@@ -1,3 +1,4 @@
+//Importaciones:
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,6 +13,7 @@ import { Button, Card, Text, TextInput } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { auth } from "../firebase/firebase";
 
+//JS:
 const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
 export default function LoginScreen() {
@@ -20,8 +22,6 @@ export default function LoginScreen() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // ✅ fase: intro splash arriba del fondo
   const [introDone, setIntroDone] = useState(false);
 
   // ===== Animaciones Intro (splash in-app) =====
@@ -93,26 +93,19 @@ const onLogin = async () => {
   }
 };
 
-
-  // Overlay base (constante) para que no haya “corte” visual
   const baseOverlay = "rgba(4, 10, 22, 0.55)";
-
-  // Intro overlay un poco más suave (solo mientras dura el splash)
   const introOverlayOpacity = useMemo(() => (introDone ? 0 : 0.45), [introDone]);
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ✅ Fondo fijo: NO cambia nunca => transición continua */}
       <ImageBackground
         source={require("../../assets/images/splash.jpeg")}
         style={styles.full}
         resizeMode="cover"
-        imageStyle={{ right: -200 }} // ✅ igual que pediste
+        imageStyle={{ right: -200 }}
       >
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: baseOverlay }]} />
       </ImageBackground>
-
-      {/* ✅ Capa Intro Splash (encima del mismo fondo) */}
       {!introDone ? (
         <Animated.View style={[styles.absolute, { opacity: introOpacity }]}>
           <Animated.View style={[styles.full, { transform: [{ scale: introScale }] }]}>
@@ -133,8 +126,6 @@ const onLogin = async () => {
           </Animated.View>
         </Animated.View>
       ) : null}
-
-      {/* ✅ UI Login encima, aparece sin cortar el fondo */}
       <KeyboardAvoidingView
         style={styles.absolute}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

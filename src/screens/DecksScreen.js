@@ -1,12 +1,11 @@
+//Importaciones:
 import { useMemo } from "react";
 import { View } from "react-native";
 import { Button, Card, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { auth } from "../firebase/firebase";
 
-/**
- * ✅ UIDs reales
- */
+//JS:
 const PLAYERS = [
   { key: "aure", label: "Aure", uid: "sW53hw9EdVXDIJMI3BnPTcYRbAn1", icon: "crown-outline" },
   { key: "rami", label: "Rami", uid: "mFXk9M3WnOgTvtSnjlUQqz1TDsa2", icon: "sword-cross" },
@@ -68,7 +67,7 @@ export default function DecksScreen({ navigation }) {
         }}
       >
         <Card.Content style={{ paddingTop: 18, paddingBottom: 18, gap: 14 }}>
-          {/* Header lindo */}
+          {/* Header  */}
           <View style={{ gap: 8, alignItems: "center" }}>
             <View
               style={{
@@ -94,7 +93,6 @@ export default function DecksScreen({ navigation }) {
             </Text>
           </View>
 
-          {/* Botones grandes centrados */}
           <View style={{ gap: 12, marginTop: 6 }}>
             <BigButton
               mode="contained"
@@ -114,7 +112,6 @@ export default function DecksScreen({ navigation }) {
             ))}
           </View>
 
-          {/* Detallito visual abajo (opcional, suma estética) */}
           <View
             style={{
               marginTop: 8,

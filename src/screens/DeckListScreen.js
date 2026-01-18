@@ -1,3 +1,4 @@
+//Importaciones:
 import { collection, deleteDoc, doc, onSnapshot, query, where } from "firebase/firestore";
 import { deleteObject, ref } from "firebase/storage";
 import { useEffect, useMemo, useState } from "react";
@@ -6,6 +7,7 @@ import { Button, Card, FAB, Modal, Portal, Text, useTheme } from "react-native-p
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { auth, db, storage } from "../firebase/firebase";
 
+//JS:
 export default function DeckListScreen({ route, navigation }) {
   const theme = useTheme();
   const { ownerId, titulo } = route.params || {};
@@ -15,16 +17,12 @@ export default function DeckListScreen({ route, navigation }) {
 
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // 👇 modal preview imagen
   const [preview, setPreview] = useState({ visible: false, uri: null, title: "" });
   const openPreview = (uri, title = "") => {
     if (!uri) return;
     setPreview({ visible: true, uri, title });
   };
   const closePreview = () => setPreview({ visible: false, uri: null, title: "" });
-
-  // 👇 confirm delete (custom modal)
   const [deleteState, setDeleteState] = useState({ visible: false, deck: null, rank: null });
   const openDelete = (deck, rank) => setDeleteState({ visible: true, deck, rank });
   const closeDelete = () => setDeleteState({ visible: false, deck: null, rank: null });
@@ -51,7 +49,6 @@ export default function DeckListScreen({ route, navigation }) {
     navigation.setOptions({ title: titulo || "Decks" });
   }, [titulo, navigation]);
 
-  // ✅ Ranking por fuerza desc (sin fuerza => al final)
   const rankedDecks = useMemo(() => {
     const getForce = (d) => {
       const n = Number(d?.fuerza);
@@ -159,7 +156,6 @@ export default function DeckListScreen({ route, navigation }) {
     );
   };
 
-  // ✅ badge arriba de todo (arregla que quede tapado por la imagen)
   const RankBadge = ({ rank }) => (
     <View
       style={{
@@ -207,7 +203,7 @@ export default function DeckListScreen({ route, navigation }) {
         contentContainerStyle={{ padding: 16, paddingBottom: isMine ? 110 : 28, gap: 12 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text variant="headlineMedium">{titulo || "Decks"}</Text>
+        <Text variant="headlineMedium" style={{ fontWeight: "900" }}>{titulo || "Decks"}</Text>
 
         {loading ? <Text>Cargando...</Text> : null}
 
@@ -320,7 +316,6 @@ export default function DeckListScreen({ route, navigation }) {
                       {d.nombre || "—"}
                     </Text>
 
-                    {/* ✅ sacamos la fuerza duplicada (ya queda abajo en el pill) */}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <MaterialCommunityIcons
                         name="cards"
@@ -411,7 +406,6 @@ export default function DeckListScreen({ route, navigation }) {
         </Modal>
       </Portal>
 
-      {/* ✅ Confirm delete (estético) */}
       <Portal>
         <Modal
           visible={deleteState.visible}

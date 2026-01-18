@@ -1,10 +1,12 @@
+//Importaciones:
 import { doc, increment, serverTimestamp, updateDoc } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Image, Pressable, View } from "react-native";
 import { Button, Card, Chip, Dialog, Portal, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { db } from "../firebase/firebase"; // ajustá ruta
+import { db } from "../firebase/firebase";
 
+//JS:
 function LivesBadge({ lives = 2, theme }) {
   return (
     <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -38,9 +40,7 @@ function LivesBadge({ lives = 2, theme }) {
   );
 }
 
-// ✅ Chips con look "Duel Links"
 function DuelChip({ children, icon, tone = "neutral", theme }) {
-  // neutral = surfaceVariant; gold = primary tint; blue = tertiary tint
   const bg =
     tone === "gold"
       ? "rgba(214, 179, 93, 0.16)"
@@ -73,11 +73,6 @@ function DuelChip({ children, icon, tone = "neutral", theme }) {
   );
 }
 
-/**
- * ✅ MISMA INFO, layout horizontal interno:
- * - Imagen izquierda
- * - Info derecha
- */
 function DeckSide({ deck, side, selected, theme }) {
   const eliminated = (deck?.lives ?? 2) <= 0 || deck?.eliminated;
 
@@ -133,12 +128,12 @@ function DeckSide({ deck, side, selected, theme }) {
         </View>
 
         {/* Row: imagen + info */}
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: 25, alignItems: "center" }}>
           {/* Imagen */}
           <View
             style={{
-              width: 120,
-              height: 88,
+              height: 150,
+              width: 140,
               borderRadius: 16,
               overflow: "hidden",
               borderWidth: 1,
@@ -146,13 +141,15 @@ function DeckSide({ deck, side, selected, theme }) {
               backgroundColor: theme.colors.surfaceVariant,
               alignItems: "center",
               justifyContent: "center",
+              marginTop: 7,
+              marginBottom:7
             }}
           >
             {deck.insigniaResolvedUrl ? (
               <Image
                 source={{ uri: deck.insigniaResolvedUrl }}
                 style={{ width: "100%", height: "100%" }}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             ) : (
               <View style={{ alignItems: "center", justifyContent: "center" }}>
@@ -174,10 +171,6 @@ function DeckSide({ deck, side, selected, theme }) {
               <DuelChip theme={theme} icon="sword" tone="blue">
                 {typeof deck.power === "number" ? `Fuerza: ${deck.power}` : "Fuerza: —"}
               </DuelChip>
-
-              <DuelChip theme={theme} icon="heart-multiple" tone="gold">
-                2 vidas
-              </DuelChip>
             </View>
 
             <LivesBadge lives={deck.lives ?? 2} theme={theme} />
@@ -192,24 +185,11 @@ export default function VersusScreen({ route, navigation }) {
   const theme = useTheme();
   const { leftDeck, rightDeck } = route.params || {};
 
-  const [winnerSide, setWinnerSide] = useState(null); // "left" | "right"
+  const [winnerSide, setWinnerSide] = useState(null); 
   const [saving, setSaving] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // ✅ ocultar tab bar SOLO en esta pantalla
-  useEffect(() => {
-    const parent = navigation.getParent();
-    try {
-      parent?.setOptions({ tabBarStyle: { display: "none" } });
-    } catch (e) {}
-
-    return () => {
-      try {
-        parent?.setOptions({ tabBarStyle: undefined });
-      } catch (e) {}
-    };
-  }, [navigation]);
 
   const leftEliminated = (leftDeck?.lives ?? 2) <= 0 || leftDeck?.eliminated;
   const rightEliminated = (rightDeck?.lives ?? 2) <= 0 || rightDeck?.eliminated;
@@ -266,9 +246,7 @@ export default function VersusScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background, padding: 16 }}>
-      {/* ✅ Contenedor centrado verticalmente con mismo aire arriba/abajo */}
       <View style={{ flex: 1, justifyContent: "center", gap: 12 }}>
-        {/* TOP deck */}
         <Pressable onPress={() => onPickWinner("left")} disabled={!canPickLeft || saving}>
           <DeckSide deck={leftDeck} side="top" selected={winnerSide === "left"} theme={theme} />
         </Pressable>
@@ -279,7 +257,7 @@ export default function VersusScreen({ route, navigation }) {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 16, // menos redondeado
+              borderRadius: 16, 
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
@@ -308,14 +286,13 @@ export default function VersusScreen({ route, navigation }) {
         ) : null}
       </View>
 
-      {/* ✅ Modal confirmar ganador (mejor color + menos redondeado) */}
       <Portal>
         <Dialog
           visible={confirmOpen}
           onDismiss={() => setConfirmOpen(false)}
           style={{
             backgroundColor: theme.colors.surface,
-            borderRadius: 12, // menos redondeado
+            borderRadius: 12, 
             borderWidth: 1,
             borderColor: theme.colors.outline,
           }}

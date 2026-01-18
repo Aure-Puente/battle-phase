@@ -1,3 +1,4 @@
+//Importaciones:
 import * as ImagePicker from "expo-image-picker";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -6,6 +7,7 @@ import { Image, ScrollView, View } from "react-native";
 import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { auth, db, storage } from "../firebase/firebase";
 
+//JS:
 const onlyNumber = (v) => String(v || "").replace(/[^\d]/g, "");
 
 async function pickImage() {
@@ -33,8 +35,8 @@ export default function DeckCreateScreen({ navigation }) {
   const user = auth.currentUser;
 
   const [nombre, setNombre] = useState("");
-  const [fuerza, setFuerza] = useState(""); // string para input
-  const [insignia, setInsignia] = useState(null); // { uri }
+  const [fuerza, setFuerza] = useState(""); 
+  const [insignia, setInsignia] = useState(null);
   const [arquetipo, setArquetipo] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -91,21 +93,19 @@ export default function DeckCreateScreen({ navigation }) {
 
       setSaving(true);
 
-      const now = Date.now(); // ✅ definido
+      const now = Date.now();
 
-      // 1) Creamos doc primero (para tener deckId)
       const docRef = await addDoc(collection(db, "decks"), {
         nombre: name,
         fuerza: fuerzaNumber ?? null,
         ownerUid: user.uid,
-        createdAt: serverTimestamp(), // server
-        createdAtMs: now,             // ✅ orden estable
+        createdAt: serverTimestamp(), 
+        createdAtMs: now,             
         updatedAt: serverTimestamp(),
         insigniaUrl: null,
         arquetipoUrl: null,
       });
 
-      // 2) Subimos imágenes opcionales a Storage
       const basePath = `decks/${user.uid}/${docRef.id}`;
 
       const insigniaUrl = insignia?.uri
@@ -122,7 +122,7 @@ export default function DeckCreateScreen({ navigation }) {
           })
         : null;
 
-      // 3) Actualizamos el doc con las URLs (si hay)
+
       if (insigniaUrl || arquetipoUrl) {
         await updateDoc(doc(db, "decks", docRef.id), {
           insigniaUrl: insigniaUrl || null,
@@ -145,7 +145,7 @@ export default function DeckCreateScreen({ navigation }) {
         contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 12 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text variant="headlineMedium">Nuevo Deck</Text>
+        <Text variant="headlineMedium" style={{ fontWeight: "900" }}>Nuevo Deck</Text>
 
         <Card mode="contained">
           <Card.Content style={{ gap: 12 }}>
