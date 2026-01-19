@@ -173,7 +173,7 @@ export default function DeckListScreen({ route, navigation }) {
         opacity: 0.98,
       }}
     >
-      <Text style={{ fontWeight: "900" }}>#{rank}</Text>
+      <Text style={{ fontWeight: "900", color: "#2A3550" }}>#{rank}</Text>
     </View>
   );
 

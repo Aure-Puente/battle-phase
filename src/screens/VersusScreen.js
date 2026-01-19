@@ -162,7 +162,7 @@ function DeckSide({ deck, side, selected, theme }) {
           </View>
 
           {/* Info */}
-          <View style={{ flex: 1, gap: 8 }}>
+          <View style={{ flex: 1, gap: 15 }}>
             <Text style={{ fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
               {deck.name || "Deck"}
             </Text>

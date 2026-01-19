@@ -80,7 +80,7 @@ function PlayerHeader({ theme, label, icon, count }) {
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
-      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.outline }} />
+      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.primary }} />
       <View
         style={{
           flexDirection: "row",
@@ -91,7 +91,7 @@ function PlayerHeader({ theme, label, icon, count }) {
           borderRadius: 999,
           backgroundColor: theme.colors.surface,
           borderWidth: 1,
-          borderColor: theme.colors.outline,
+          borderColor: theme.colors.primary,
         }}
       >
         <MaterialCommunityIcons name={icon} size={18} color={theme.colors.primary} />
@@ -100,7 +100,7 @@ function PlayerHeader({ theme, label, icon, count }) {
           {count}
         </Chip>
       </View>
-      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.outline }} />
+      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.primary }} />
     </View>
   );
 }
@@ -472,7 +472,7 @@ export default function TorneoScreen({ navigation }) {
             ) : (
               <View style={{ gap: 14, marginTop: 4 }}>
                 {grouped.map(({ player, decks, activeCount }) => (
-                  <View key={player.uid} style={{ gap: 10 }}>
+                  <View key={player.uid} style={{ gap: 10}}>
                     <PlayerHeader theme={theme} label={player.label} icon={player.icon} count={activeCount} />
 
                     {decks.length === 0 ? (

@@ -32,9 +32,9 @@ function DeckThumb({ uri, theme }) {
   return (
     <View
       style={{
-        width: 54,
-        height: 54,
-        borderRadius: 14,
+        width: 100,
+        height: 100,
+        borderRadius: 18,
         overflow: "hidden",
         borderWidth: 1,
         borderColor: theme.colors.outline,
@@ -120,6 +120,24 @@ export default function InicioScreen({ navigation }) {
       setTimerError("No se pudo iniciar el timer (revisá reglas de Firestore).");
     }
   };
+
+    const stopDuelTimer = async () => {
+    setTimerError("");
+
+    setTournament((t) => ({ ...t, deadlineAt: null }));
+
+    try {
+      await setDoc(
+        doc(db, TOURNAMENT_DOC.col, TOURNAMENT_DOC.id),
+        { deadlineAt: null },
+        { merge: true }
+      );
+    } catch (e) {
+      console.log("Error stop deadlineAt:", e);
+      setTimerError("No se pudo detener el timer (revisá reglas de Firestore).");
+    }
+  };
+
 
   const onLogout = async () => {
     try {
@@ -316,7 +334,7 @@ export default function InicioScreen({ navigation }) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 12 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 12 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Header + Logout */}
@@ -412,8 +430,19 @@ export default function InicioScreen({ navigation }) {
             textStyle={chipText}
             onPress={startDuelTimer}
           >
-            Iniciar / reiniciar 7 días
+            Iniciar / Reiniciar
           </Chip>
+          {tournament.deadlineAt ? (
+          <Chip
+            compact
+            icon="stop-circle-outline"
+            style={chipStyle}
+            textStyle={chipText}
+            onPress={stopDuelTimer}
+          >
+            Detener cuenta regresiva
+          </Chip>
+        ) : null}
         </Card.Content>
       </Card>
 
@@ -476,7 +505,7 @@ export default function InicioScreen({ navigation }) {
                     style={{
                       flex: 1,
                       height: 1,
-                      backgroundColor: theme.colors.outline,
+                      backgroundColor: theme.colors.primary,
                       opacity: 0.7,
                     }}
                   />
@@ -502,7 +531,7 @@ export default function InicioScreen({ navigation }) {
                     style={{
                       flex: 1,
                       height: 1,
-                      backgroundColor: theme.colors.outline,
+                      backgroundColor: theme.colors.primary,
                       opacity: 0.7,
                     }}
                   />
