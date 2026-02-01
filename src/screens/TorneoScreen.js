@@ -157,7 +157,14 @@ function StepItem({ item, theme, onPress, selected }) {
           </View>
 
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ fontWeight: "900", fontSize: 15 }} numberOfLines={1}>
+            <Text
+              style={{
+                fontWeight: "900",
+                fontSize: 15,
+                textDecorationLine: eliminated ? "line-through" : "none",
+              }}
+              numberOfLines={1}
+            >
               {item.name || "Deck sin nombre"}
             </Text>
 
@@ -166,19 +173,25 @@ function StepItem({ item, theme, onPress, selected }) {
               <Text style={{ color: theme.colors.onSurfaceVariant }}>{item.ownerLabel || "Jugador"}</Text>
             </View>
           </View>
-
-          
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 8,
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Chip compact icon="sword" style={chipStyle} textStyle={chipText}>
             {typeof item.power === "number" ? `Fuerza: ${item.power}` : "Fuerza: —"}
           </Chip>
-            <View style={{justifyContent: "center", alignItems: "center", gap:5}}>
-            <Text style={{fontWeight: "900" }}>Vidas</Text>
-            <Lives lives={lives} theme={theme} />
-            </View>
 
+          <View style={{ justifyContent: "center", alignItems: "center", gap: 5 }}>
+            <Text style={{ fontWeight: "900" }}>Vidas</Text>
+            <Lives lives={lives} theme={theme} />
+          </View>
         </View>
       </Card.Content>
     </Card>
@@ -194,6 +207,7 @@ export default function TorneoScreen({ navigation }) {
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [elimOpenByUid, setElimOpenByUid] = useState({});
 
   useEffect(() => {
     const unsubs = [];
@@ -281,19 +295,28 @@ export default function TorneoScreen({ navigation }) {
 
     const sortWithin = (arr) => {
       const withPower = arr
-  .filter((d) => typeof d.power === "number")
-  .sort((a, b) => b.power - a.power);
+        .filter((d) => typeof d.power === "number")
+        .sort((a, b) => b.power - a.power);
 
       const withoutPower = arr
         .filter((d) => typeof d.power !== "number")
         .sort((a, b) => (a._t || 0) - (b._t || 0));
+
       return [...withPower, ...withoutPower];
     };
 
     return PLAYERS.map((p) => {
-      const decksPlayer = sortWithin(byUid[p.uid] || []);
-      const activeCount = decksPlayer.filter((d) => !(d.lives <= 0 || d.eliminated)).length; 
-      return { player: p, decks: decksPlayer, activeCount };
+      const all = sortWithin(byUid[p.uid] || []);
+      const activeDecks = all.filter((d) => !(d.lives <= 0 || d.eliminated));
+      const eliminatedDecks = all.filter((d) => d.lives <= 0 || d.eliminated);
+
+      return {
+        player: p,
+        activeDecks,
+        eliminatedDecks,
+        activeCount: activeDecks.length,
+        eliminatedCount: eliminatedDecks.length,
+      };
     });
   }, [decks]);
 
@@ -327,6 +350,7 @@ export default function TorneoScreen({ navigation }) {
 
       setPicked([]);
       setResetOpen(false);
+      setElimOpenByUid({});
     } catch (e) {
       console.log("Error reset torneo:", e);
     } finally {
@@ -350,19 +374,6 @@ export default function TorneoScreen({ navigation }) {
             SURVIVAL: Extra Life
           </Text>
         </View>
-
-        {picked.length > 0 ? (
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <Chip icon="gesture-tap" compact style={chipStyle} textStyle={chipText}>
-              Elegiste {picked.length}/2
-            </Chip>
-            {picked.map((p) => (
-              <Chip key={p.id} compact icon="check" style={chipStyle} textStyle={chipText}>
-                {p.name}
-              </Chip>
-            ))}
-          </View>
-        ) : null}
       </View>
 
       <Card
@@ -380,9 +391,7 @@ export default function TorneoScreen({ navigation }) {
             <MaterialCommunityIcons name="trophy" size={22} color={theme.colors.primary} />
 
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: "800" }}>
-                Torneo actual
-              </Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: "800" }}>Torneo actual</Text>
               <Text style={{ fontWeight: "900", fontSize: 20, color: theme.colors.onSurface }}>
                 SURVIVAL: Extra Life
               </Text>
@@ -471,40 +480,101 @@ export default function TorneoScreen({ navigation }) {
               </View>
             ) : (
               <View style={{ gap: 14, marginTop: 4 }}>
-                {grouped.map(({ player, decks, activeCount }) => (
-                  <View key={player.uid} style={{ gap: 10}}>
-                    <PlayerHeader theme={theme} label={player.label} icon={player.icon} count={activeCount} />
+                {grouped.map(({ player, activeDecks, eliminatedDecks, activeCount, eliminatedCount }) => {
+                  const elimOpen = !!elimOpenByUid[player.uid];
 
-                    {decks.length === 0 ? (
-                      <View
-                        style={{
-                          padding: 12,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: theme.colors.outline,
-                          backgroundColor: theme.colors.surfaceVariant,
-                        }}
-                      >
-                        <Text style={{ color: theme.colors.onSurfaceVariant }}>Sin decks cargados todavía.</Text>
-                      </View>
-                    ) : (
-                      <View style={{ gap: 12 }}>
-                        {decks.map((d) => {
-                          const selected = picked.some((p) => p.id === d.id);
-                          return (
-                            <StepItem
-                              key={d.id}
-                              item={d}
-                              theme={theme}
-                              onPress={() => onPickDeck(d)}
-                              selected={selected}
-                            />
-                          );
-                        })}
-                      </View>
-                    )}
-                  </View>
-                ))}
+                  return (
+                    <View key={player.uid} style={{ gap: 10 }}>
+                      <PlayerHeader theme={theme} label={player.label} icon={player.icon} count={activeCount} />
+
+                      {activeDecks.length === 0 && eliminatedDecks.length === 0 ? (
+                        <View
+                          style={{
+                            padding: 12,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: theme.colors.outline,
+                            backgroundColor: theme.colors.surfaceVariant,
+                          }}
+                        >
+                          <Text style={{ color: theme.colors.onSurfaceVariant }}>Sin decks cargados todavía.</Text>
+                        </View>
+                      ) : (
+                        <View style={{ gap: 12 }}>
+                          {/* Activos */}
+                          {activeDecks.length === 0 ? (
+                            <View
+                              style={{
+                                padding: 12,
+                                borderRadius: 16,
+                                borderWidth: 1,
+                                borderColor: theme.colors.outline,
+                                backgroundColor: theme.colors.surfaceVariant,
+                              }}
+                            >
+                              <Text style={{ color: theme.colors.onSurfaceVariant }}>No hay decks activos.</Text>
+                            </View>
+                          ) : (
+                            activeDecks.map((d) => {
+                              const selected = picked.some((p) => p.id === d.id);
+                              return (
+                                <StepItem
+                                  key={d.id}
+                                  item={d}
+                                  theme={theme}
+                                  onPress={() => onPickDeck(d)}
+                                  selected={selected}
+                                />
+                              );
+                            })
+                          )}
+
+                          {/* Eliminados en desplegable */}
+                          {eliminatedDecks.length > 0 && (
+                            <View
+                              style={{
+                                borderRadius: 16,
+                                overflow: "hidden",
+                                borderWidth: 1,
+                                borderColor: theme.colors.outline,
+                                backgroundColor: theme.colors.surfaceVariant,
+                              }}
+                            >
+                              <List.Accordion
+                                title={`Decks eliminados (${eliminatedCount})`}
+                                expanded={elimOpen}
+                                onPress={() =>
+                                  setElimOpenByUid((prev) => ({
+                                    ...prev,
+                                    [player.uid]: !prev[player.uid],
+                                  }))
+                                }
+                                left={(props) => (
+                                  <List.Icon {...props} icon="skull" color={theme.colors.onSurfaceVariant} />
+                                )}
+                                style={{ backgroundColor: theme.colors.surfaceVariant }}
+                                titleStyle={{ color: theme.colors.onSurface, fontWeight: "900" }}
+                                rippleColor="rgba(214,179,93,0.18)"
+                              >
+                                <View style={{ padding: 14, gap: 12 }}>
+                                  {eliminatedDecks.map((d) => (
+                                    <StepItem
+                                      key={d.id}
+                                      item={d}
+                                      theme={theme}
+                                      onPress={undefined}
+                                      selected={false}
+                                    />
+                                  ))}
+                                </View>
+                              </List.Accordion>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -532,14 +602,12 @@ export default function TorneoScreen({ navigation }) {
           onDismiss={() => setResetOpen(false)}
           style={{
             backgroundColor: theme.colors.surface,
-            borderRadius: 12, 
+            borderRadius: 12,
             borderWidth: 1,
             borderColor: theme.colors.outline,
           }}
         >
-          <Dialog.Title style={{ fontWeight: "900", color: theme.colors.onSurface }}>
-            Reiniciar torneo
-          </Dialog.Title>
+          <Dialog.Title style={{ fontWeight: "900", color: theme.colors.onSurface }}>Reiniciar torneo</Dialog.Title>
           <Dialog.Content>
             <View
               style={{
@@ -552,7 +620,8 @@ export default function TorneoScreen({ navigation }) {
               }}
             >
               <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                • Resetear todos los decks a <Text style={{ fontWeight: "900", color: theme.colors.onSurface }}>2 vidas</Text>
+                • Resetear todos los decks a{" "}
+                <Text style={{ fontWeight: "900", color: theme.colors.onSurface }}>2 vidas</Text>
               </Text>
               <Text style={{ color: theme.colors.onSurfaceVariant }}>• Volver a habilitar los eliminados</Text>
               <Text style={{ color: theme.colors.onSurfaceVariant }}>• Quitar la marca de “Ganador sigue”</Text>

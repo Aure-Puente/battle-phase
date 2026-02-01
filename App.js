@@ -1,9 +1,11 @@
-//APP:
+// App.js
 import { DarkTheme as NavDarkTheme, NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import "react-native-gesture-handler";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "./src/firebase/firebase";
@@ -38,21 +40,23 @@ export default function App() {
   };
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={duelLinksTheme}>
-        <StatusBar style="light" backgroundColor={APP_BG} />
-        <SafeAreaView style={{ flex: 1, backgroundColor: APP_BG }} edges={["top"]}>
-          {checking ? (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <ActivityIndicator />
-            </View>
-          ) : (
-            <NavigationContainer theme={navTheme}>
-              {user ? <AppTabs /> : <LoginScreen />}
-            </NavigationContainer>
-          )}
-        </SafeAreaView>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PaperProvider theme={duelLinksTheme}>
+          <StatusBar style="light" backgroundColor={APP_BG} />
+          <SafeAreaView style={{ flex: 1, backgroundColor: APP_BG }} edges={["top"]}>
+            {checking ? (
+              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <ActivityIndicator />
+              </View>
+            ) : (
+              <NavigationContainer theme={navTheme}>
+                {user ? <AppTabs /> : <LoginScreen />}
+              </NavigationContainer>
+            )}
+          </SafeAreaView>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

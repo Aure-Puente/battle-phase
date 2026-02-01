@@ -2,14 +2,12 @@
 import * as ImagePicker from "expo-image-picker";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, ScrollView, View } from "react-native";
 import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { auth, db, storage } from "../firebase/firebase";
 
 //JS:
-const onlyNumber = (v) => String(v || "").replace(/[^\d]/g, "");
-
 async function pickImage() {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== "granted") throw new Error("Permiso de galería denegado");
@@ -30,6 +28,22 @@ async function uriToBlob(uri) {
   return await r.blob();
 }
 
+//Rangos:
+const RANGES = [
+  { key: "FUN", label: "FUN", color: "#FF4D4D" },
+  { key: "FUN_ELITE", label: "FUN ELITE", color: "#FF8A3D" },
+  { key: "ROGUE", label: "ROGUE", color: "#FFD166" },
+  { key: "ROGUE_ELITE", label: "ROGUE ELITE", color: "#2ED47A" },
+  { key: "META", label: "META", color: "#2DA8FF" },
+  { key: "DOMINANTE", label: "DOMINANTE", color: "#8B5CF6" },
+];
+
+const RANGE_LAYOUT = [
+  ["META", "DOMINANTE"],
+  ["ROGUE", "ROGUE_ELITE"],
+  ["FUN", "FUN_ELITE"],
+];
+
 export default function DeckEditScreen({ route, navigation }) {
   const theme = useTheme();
   const user = auth.currentUser;
@@ -38,9 +52,9 @@ export default function DeckEditScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
 
   const [nombre, setNombre] = useState("");
-  const [fuerza, setFuerza] = useState("");
+  const [rango, setRango] = useState("FUN");
 
-  const [insigniaLocal, setInsigniaLocal] = useState(null); 
+  const [insigniaLocal, setInsigniaLocal] = useState(null);
   const [arquetipoLocal, setArquetipoLocal] = useState(null);
 
   const [insigniaUrl, setInsigniaUrl] = useState(null);
@@ -52,13 +66,6 @@ export default function DeckEditScreen({ route, navigation }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const fuerzaNumber = useMemo(() => {
-    const cleaned = onlyNumber(fuerza);
-    if (!cleaned) return null;
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
-  }, [fuerza]);
-
   useEffect(() => {
     if (!deckId) return;
 
@@ -67,13 +74,14 @@ export default function DeckEditScreen({ route, navigation }) {
       (snap) => {
         const data = snap.data();
         if (!data) return;
+
         if (data.ownerUid && user?.uid && data.ownerUid !== user.uid) {
           navigation.goBack();
           return;
         }
 
         setNombre(data.nombre || "");
-        setFuerza(data.fuerza != null ? String(data.fuerza) : "");
+        setRango(data.rango || "FUN");
         setInsigniaUrl(data.insigniaUrl || null);
         setArquetipoUrl(data.arquetipoUrl || null);
 
@@ -164,9 +172,13 @@ export default function DeckEditScreen({ route, navigation }) {
         });
       }
 
+      const selectedRange = RANGES.find((r) => r.key === rango) || RANGES[0];
+
       await updateDoc(doc(db, "decks", deckId), {
         nombre: name,
-        fuerza: fuerzaNumber ?? null,
+        rango: selectedRange.key,
+        rangoLabel: selectedRange.label,
+        rangoColor: selectedRange.color,
         insigniaUrl: newInsigniaUrl || null,
         arquetipoUrl: newArquetipoUrl || null,
         updatedAt: serverTimestamp(),
@@ -183,7 +195,7 @@ export default function DeckEditScreen({ route, navigation }) {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background, padding: 16 }}>
-        <Text>Cargando...</Text>
+        <Text style={{ color: theme.colors.onSurfaceVariant }}>Cargando...</Text>
       </View>
     );
   }
@@ -191,30 +203,32 @@ export default function DeckEditScreen({ route, navigation }) {
   const previewInsigniaUri = insigniaLocal?.uri || insigniaUrl;
   const previewArquetipoUri = arquetipoLocal?.uri || arquetipoUrl;
 
+  const selectedRange = RANGES.find((r) => r.key === rango) || RANGES[0];
+  const getRange = (key) => RANGES.find((r) => r.key === key);
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 12 }}>
-        <Text variant="headlineMedium" style={{ fontWeight: "900" }}>Editar Deck</Text>
+        <Text variant="headlineMedium" style={{ fontWeight: "900" }}>
+          Editar Deck
+        </Text>
 
         <Card mode="contained">
           <Card.Content style={{ gap: 12 }}>
+            {/* 1) Nombre */}
             <TextInput label="Nombre *" value={nombre} onChangeText={setNombre} />
 
-            <TextInput
-              label="Fuerza (opcional)"
-              value={fuerza}
-              onChangeText={(v) => setFuerza(onlyNumber(v))}
-              keyboardType="numeric"
-            />
-
-            {/* Insignia */}
+            {/* 2) Insignia */}
             <View style={{ gap: 8 }}>
               <Text variant="titleMedium">Insignia (opcional)</Text>
 
               {previewInsigniaUri && !removeInsignia ? (
-                <Image source={{ uri: previewInsigniaUri }} style={{ width: 120, height: 120, borderRadius: 14 }} />
+                <Image
+                  source={{ uri: previewInsigniaUri }}
+                  style={{ width: 120, height: 120, borderRadius: 14 }}
+                />
               ) : (
-                <Text style={{ opacity: 0.8 }}>Sin imagen</Text>
+                <Text style={{ opacity: 0.8, color: theme.colors.onSurfaceVariant }}>Sin imagen</Text>
               )}
 
               <Button mode="outlined" icon="image" onPress={onPickInsignia}>
@@ -233,14 +247,88 @@ export default function DeckEditScreen({ route, navigation }) {
               ) : null}
             </View>
 
-            {/* Arquetipo */}
+            {/* 3) Rango */}
+            <View style={{ gap: 8 }}>
+              <Text variant="titleMedium">Rango *</Text>
+
+              <View style={{ gap: 8 }}>
+                {RANGE_LAYOUT.map((row, idx) => (
+                  <View key={`row-${idx}`} style={{ flexDirection: "row", gap: 10 }}>
+                    {row.map((k) => {
+                      const r = getRange(k);
+                      if (!r) return null;
+
+                      const active = r.key === rango;
+
+                      return (
+                        <Button
+                          key={r.key}
+                          mode={active ? "contained" : "outlined"}
+                          onPress={() => setRango(r.key)}
+                          compact
+                          style={{
+                            flex: 1,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: active ? r.color : theme.colors.outline,
+                            backgroundColor: active ? r.color : "transparent",
+                          }}
+                          contentStyle={{ height: 38 }}
+                          labelStyle={{
+                            fontWeight: "900",
+                            fontSize: 12,
+                            color: active ? "#070B14" : theme.colors.onSurface,
+                          }}
+                        >
+                          {r.label}
+                        </Button>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+
+              <View
+                style={{
+                  marginTop: 6,
+                  padding: 10,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: theme.colors.outline,
+                  backgroundColor: theme.colors.surfaceVariant,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <View
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 6,
+                    backgroundColor: selectedRange.color,
+                  }}
+                />
+                <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                  Seleccionado:{" "}
+                  <Text style={{ color: theme.colors.onSurface, fontWeight: "900" }}>
+                    {selectedRange.label}
+                  </Text>
+                </Text>
+              </View>
+            </View>
+
+            {/* 4) Arquetipo */}
             <View style={{ gap: 8 }}>
               <Text variant="titleMedium">Arquetipo (opcional)</Text>
 
               {previewArquetipoUri && !removeArquetipo ? (
-                <Image source={{ uri: previewArquetipoUri }} style={{ width: 120, height: 120, borderRadius: 14 }} />
+                <Image
+                  source={{ uri: previewArquetipoUri }}
+                  style={{ width: 120, height: 120, borderRadius: 14 }}
+                />
               ) : (
-                <Text style={{ opacity: 0.8 }}>Sin imagen</Text>
+                <Text style={{ opacity: 0.8, color: theme.colors.onSurfaceVariant }}>Sin imagen</Text>
               )}
 
               <Button mode="outlined" icon="image" onPress={onPickArquetipo}>

@@ -1,8 +1,8 @@
 //Importaciones:
 import { signOut } from "firebase/auth";
 import { collection, doc, onSnapshot, query, setDoc, where } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
-import { Image, ScrollView, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Image, ScrollView, View } from "react-native";
 import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { auth, db } from "../firebase/firebase";
@@ -46,8 +46,70 @@ function DeckThumb({ uri, theme }) {
       {uri ? (
         <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
       ) : (
-        <MaterialCommunityIcons name="image-off-outline" size={22} color={theme.colors.onSurfaceVariant} />
+        <MaterialCommunityIcons
+          name="image-off-outline"
+          size={22}
+          color={theme.colors.onSurfaceVariant}
+        />
       )}
+    </View>
+  );
+}
+
+function DuelLoading({ theme, label = "Cargando resumen..." }) {
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [spin]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.background,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <Card
+        mode="contained"
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: theme.colors.outline,
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        <Card.Content style={{ alignItems: "center", gap: 12, paddingVertical: 18 }}>
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <MaterialCommunityIcons name="cards" size={52} color={theme.colors.primary} />
+          </Animated.View>
+
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "900", fontSize: 16 }}>
+            {label}
+          </Text>
+
+          <Text style={{ color: theme.colors.onSurfaceVariant }}>Sincronizando datos…</Text>
+        </Card.Content>
+      </Card>
     </View>
   );
 }
@@ -68,14 +130,8 @@ export default function InicioScreen({ navigation }) {
   };
   const chipText = { color: theme.colors.onSurface, fontWeight: "900" };
 
-  const playersByUid = useMemo(
-    () => Object.fromEntries(PLAYERS.map((p) => [p.uid, p])),
-    []
-  );
-  const playersByKey = useMemo(
-    () => Object.fromEntries(PLAYERS.map((p) => [p.key, p])),
-    []
-  );
+  const playersByUid = useMemo(() => Object.fromEntries(PLAYERS.map((p) => [p.uid, p])), []);
+  const playersByKey = useMemo(() => Object.fromEntries(PLAYERS.map((p) => [p.key, p])), []);
 
   const [decks, setDecks] = useState([]);
   const [tournament, setTournament] = useState({
@@ -83,6 +139,10 @@ export default function InicioScreen({ navigation }) {
     lastOpponentUid: null,
     deadlineAt: null, // ms
   });
+  const [decksReadyCount, setDecksReadyCount] = useState(0);
+  const decksFirstShotByUidRef = useRef(new Set());
+  const [tournamentReady, setTournamentReady] = useState(false);
+  const tournamentFirstShotRef = useRef(false);
 
   const [timerError, setTimerError] = useState("");
   const [now, setNow] = useState(Date.now());
@@ -121,9 +181,8 @@ export default function InicioScreen({ navigation }) {
     }
   };
 
-    const stopDuelTimer = async () => {
+  const stopDuelTimer = async () => {
     setTimerError("");
-
     setTournament((t) => ({ ...t, deadlineAt: null }));
 
     try {
@@ -137,7 +196,6 @@ export default function InicioScreen({ navigation }) {
       setTimerError("No se pudo detener el timer (revisá reglas de Firestore).");
     }
   };
-
 
   const onLogout = async () => {
     try {
@@ -154,6 +212,11 @@ export default function InicioScreen({ navigation }) {
       const q = query(collection(db, "decks"), where("ownerUid", "==", p.uid));
       unsubs.push(
         onSnapshot(q, (snap) => {
+          if (!decksFirstShotByUidRef.current.has(p.uid)) {
+            decksFirstShotByUidRef.current.add(p.uid);
+            setDecksReadyCount((c) => c + 1);
+          }
+
           setDecks((prev) => {
             const map = new Map(prev.map((d) => [d.id, d]));
 
@@ -196,6 +259,11 @@ export default function InicioScreen({ navigation }) {
     const unsub = onSnapshot(
       ref,
       (snap) => {
+        if (!tournamentFirstShotRef.current) {
+          tournamentFirstShotRef.current = true;
+          setTournamentReady(true);
+        }
+
         const x = snap.data() || {};
         setTournament((t) => ({
           ...t,
@@ -204,12 +272,18 @@ export default function InicioScreen({ navigation }) {
           deadlineAt: x.deadlineAt?.toMillis?.() ?? null,
         }));
       },
-      () =>
+      () => {
+        if (!tournamentFirstShotRef.current) {
+          tournamentFirstShotRef.current = true;
+          setTournamentReady(true);
+        }
+
         setTournament((t) => ({
           ...t,
           lastChampionUid: null,
           lastOpponentUid: null,
-        }))
+        }));
+      }
     );
     return () => unsub && unsub();
   }, []);
@@ -331,6 +405,11 @@ export default function InicioScreen({ navigation }) {
 
   const remainingMs = tournament.deadlineAt ? tournament.deadlineAt - now : null;
 
+  const isLoading = decksReadyCount < PLAYERS.length || !tournamentReady;
+  if (isLoading) {
+    return <DuelLoading theme={theme} label={`Cargando resumen...`} />;
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
@@ -419,30 +498,17 @@ export default function InicioScreen({ navigation }) {
             <Text style={{ color: theme.colors.onSurfaceVariant }}>No iniciado</Text>
           )}
 
-          {timerError ? (
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>{timerError}</Text>
-          ) : null}
+          {timerError ? <Text style={{ color: theme.colors.onSurfaceVariant }}>{timerError}</Text> : null}
 
-          <Chip
-            compact
-            icon="play-circle-outline"
-            style={chipStyle2}
-            textStyle={chipText}
-            onPress={startDuelTimer}
-          >
+          <Chip compact icon="play-circle-outline" style={chipStyle2} textStyle={chipText} onPress={startDuelTimer}>
             Iniciar / Reiniciar
           </Chip>
+
           {tournament.deadlineAt ? (
-          <Chip
-            compact
-            icon="stop-circle-outline"
-            style={chipStyle}
-            textStyle={chipText}
-            onPress={stopDuelTimer}
-          >
-            Detener cuenta regresiva
-          </Chip>
-        ) : null}
+            <Chip compact icon="stop-circle-outline" style={chipStyle} textStyle={chipText} onPress={stopDuelTimer}>
+              Detener cuenta regresiva
+            </Chip>
+          ) : null}
         </Card.Content>
       </Card>
 
@@ -490,52 +556,54 @@ export default function InicioScreen({ navigation }) {
                   </View>
                 </View>
               </View>
+
+              <View
+                style={{
+                  width: "100%",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  marginVertical: 6,
+                }}
+              >
+                {/* Línea izquierda */}
                 <View
                   style={{
-                    width: "100%",  
-                    flexDirection: "row",
+                    flex: 1,
+                    height: 1,
+                    backgroundColor: theme.colors.primary,
+                    opacity: 0.7,
+                  }}
+                />
+
+                {/* Caja VS */}
+                <View
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 10,
-                    marginVertical: 6,
+                    borderWidth: 1,
+                    borderColor: theme.colors.outline,
+                    backgroundColor: theme.colors.surface,
                   }}
                 >
-                  {/* Línea izquierda */}
-                  <View
-                    style={{
-                      flex: 1,
-                      height: 1,
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.7,
-                    }}
-                  />
-
-                  {/* Caja VS */}
-                  <View
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor: theme.colors.outline,
-                      backgroundColor: theme.colors.surface,
-                    }}
-                  >
-                    <Text style={{ fontWeight: "900", fontSize: 16 }}>VS</Text>
-                  </View>
-
-                  {/* Línea derecha */}
-                  <View
-                    style={{
-                      flex: 1,
-                      height: 1,
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.7,
-                    }}
-                  />
+                  <Text style={{ fontWeight: "900", fontSize: 16 }}>VS</Text>
                 </View>
+
+                {/* Línea derecha */}
+                <View
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    backgroundColor: theme.colors.primary,
+                    opacity: 0.7,
+                  }}
+                />
+              </View>
+
               {/* Deck B */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <DeckThumb uri={nextFight.b.insigniaResolvedUrl} theme={theme} />
