@@ -25,6 +25,69 @@ const PLAYERS = [
   { key: "rami", label: "Rami", uid: "mFXk9M3WnOgTvtSnjlUQqz1TDsa2", icon: "sword-cross" },
 ];
 
+//Rango
+const RANGES = [
+  { key: "FUN", label: "FUN", color: "#FF4D4D" },
+  { key: "FUN_ELITE", label: "FUN ELITE", color: "#FF8A3D" },
+  { key: "ROGUE", label: "ROGUE", color: "#FFD166" },
+  { key: "ROGUE_ELITE", label: "ROGUE ELITE", color: "#2ED47A" },
+  { key: "META", label: "META", color: "#2DA8FF" },
+  { key: "DOMINANTE", label: "DOMINANTE", color: "#8B5CF6" },
+];
+
+const clamp01 = (n) => Math.max(0, Math.min(1, n));
+const hexToRgb = (hex) => {
+  const h = String(hex || "").replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return { r, g, b };
+  }
+  if (h.length === 6) {
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  return { r: 0, g: 0, b: 0 };
+};
+const rgbToHex = ({ r, g, b }) => {
+  const hx = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${hx(r)}${hx(g)}${hx(b)}`;
+};
+const mixHex = (a, b, t) => {
+  const tt = clamp01(t);
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  return rgbToHex({
+    r: A.r + (B.r - A.r) * tt,
+    g: A.g + (B.g - A.g) * tt,
+    b: A.b + (B.b - A.b) * tt,
+  });
+};
+
+const getRangeMeta = (deck) => {
+  const key = deck?.rango || null;
+  const found = key ? RANGES.find((r) => r.key === key) : null;
+  if (found) return found;
+  if (deck?.rangoLabel || deck?.rangoColor) {
+    return {
+      key: key || "CUSTOM",
+      label: deck?.rangoLabel || "Rango",
+      color: deck?.rangoColor || "#6B7280",
+    };
+  }
+
+  return null;
+};
+
+const getRangeChipStyle = (theme, rangeColor) => {
+  const bg = mixHex(theme.colors.surfaceVariant, rangeColor, 0.18);
+  const border = mixHex(theme.colors.outline, rangeColor, 0.35);
+  return { bg, border };
+};
+
 function Lives({ lives = 2, theme }) {
   return (
     <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
@@ -120,6 +183,10 @@ function StepItem({ item, theme, onPress, selected }) {
     : theme.colors.outline;
 
   const borderWidth = selected || item.isCurrentChampion ? 2 : 1;
+  const rangeMeta = getRangeMeta(item);
+  const rangeLabel = rangeMeta?.label || "—";
+  const rangeColor = rangeMeta?.color || theme.colors.onSurfaceVariant;
+  const rangeChip = rangeMeta ? getRangeChipStyle(theme, rangeColor) : null;
 
   return (
     <Card
@@ -134,13 +201,13 @@ function StepItem({ item, theme, onPress, selected }) {
         opacity: eliminated ? 0.55 : 1,
       }}
     >
-      <Card.Content style={{ paddingVertical: 12, gap: 10 }}>
+      <Card.Content style={{ paddingVertical: 14, gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
+              width: 78,
+              height: 78,
+              borderRadius: 18,
               borderWidth: 1,
               borderColor: theme.colors.outline,
               overflow: "hidden",
@@ -150,17 +217,21 @@ function StepItem({ item, theme, onPress, selected }) {
             }}
           >
             {item.insigniaResolvedUrl ? (
-              <Image source={{ uri: item.insigniaResolvedUrl }} style={{ width: 52, height: 52 }} resizeMode="cover" />
+              <Image
+                source={{ uri: item.insigniaResolvedUrl }}
+                style={{ width: 78, height: 78 }}
+                resizeMode="cover"
+              />
             ) : (
-              <MaterialCommunityIcons name="image-off-outline" size={22} color={theme.colors.onSurfaceVariant} />
+              <MaterialCommunityIcons name="image-off-outline" size={26} color={theme.colors.onSurfaceVariant} />
             )}
           </View>
 
-          <View style={{ flex: 1, gap: 3 }}>
+          <View style={{ flex: 1, gap: 4 }}>
             <Text
               style={{
                 fontWeight: "900",
-                fontSize: 15,
+                fontSize: 17,
                 textDecorationLine: eliminated ? "line-through" : "none",
               }}
               numberOfLines={1}
@@ -178,14 +249,38 @@ function StepItem({ item, theme, onPress, selected }) {
         <View
           style={{
             flexDirection: "row",
-            gap: 8,
+            gap: 10,
             flexWrap: "wrap",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <Chip compact icon="sword" style={chipStyle} textStyle={chipText}>
-            {typeof item.power === "number" ? `Fuerza: ${item.power}` : "Fuerza: —"}
+          <Chip
+            compact
+            icon={() => (
+              <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+                <MaterialCommunityIcons
+                  name="shield-star-outline"
+                  size={14}
+                  color={rangeColor}
+                  style={{ marginTop: 1 }}
+                />
+              </View>
+            )}
+            style={[
+              chipStyle,
+              rangeMeta ? { backgroundColor: rangeChip.bg, borderColor: rangeChip.border } : null,
+              { height: 28 },
+            ]}
+            contentStyle={{
+              height: 28,
+              paddingHorizontal: 8,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            textStyle={[chipText, { fontSize: 12, lineHeight: 14 }]}
+          >
+            {rangeLabel}
           </Chip>
 
           <View style={{ justifyContent: "center", alignItems: "center", gap: 5 }}>
@@ -225,7 +320,20 @@ export default function TorneoScreen({ navigation }) {
             if (ch.type === "removed") mergeMap.delete(ch.doc.id);
           });
 
-          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const docsAll = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+          const getPower = (x) =>
+            typeof x.power === "number" ? x.power : typeof x.fuerza === "number" ? x.fuerza : null;
+
+          const withPower = docsAll
+            .filter((x) => Number.isFinite(getPower(x)))
+            .sort((a, b) => getPower(b) - getPower(a));
+
+          const withoutPower = docsAll
+            .filter((x) => !Number.isFinite(getPower(x)))
+            .sort((a, b) => Number(b?.createdAtMs || 0) - Number(a?.createdAtMs || 0));
+
+          const docs = [...withPower, ...withoutPower].slice(0, 15);
 
           const resolved = await Promise.all(
             docs.map(async (x, i) => {
@@ -247,6 +355,9 @@ export default function TorneoScreen({ navigation }) {
                     : typeof x.fuerza === "number"
                     ? x.fuerza
                     : null,
+                rango: x.rango ?? null,
+                rangoLabel: x.rangoLabel ?? null,
+                rangoColor: x.rangoColor ?? null,
                 lives: typeof x.lives === "number" ? x.lives : 2,
                 isCurrentChampion: !!x.isCurrentChampion,
                 eliminated: !!x.eliminated,
@@ -501,7 +612,6 @@ export default function TorneoScreen({ navigation }) {
                         </View>
                       ) : (
                         <View style={{ gap: 12 }}>
-                          {/* Activos */}
                           {activeDecks.length === 0 ? (
                             <View
                               style={{
@@ -529,7 +639,6 @@ export default function TorneoScreen({ navigation }) {
                             })
                           )}
 
-                          {/* Eliminados en desplegable */}
                           {eliminatedDecks.length > 0 && (
                             <View
                               style={{
@@ -558,13 +667,7 @@ export default function TorneoScreen({ navigation }) {
                               >
                                 <View style={{ padding: 14, gap: 12 }}>
                                   {eliminatedDecks.map((d) => (
-                                    <StepItem
-                                      key={d.id}
-                                      item={d}
-                                      theme={theme}
-                                      onPress={undefined}
-                                      selected={false}
-                                    />
+                                    <StepItem key={d.id} item={d} theme={theme} onPress={undefined} selected={false} />
                                   ))}
                                 </View>
                               </List.Accordion>
@@ -579,7 +682,6 @@ export default function TorneoScreen({ navigation }) {
             )}
           </View>
 
-          {/* Botón reinicio abajo del todo */}
           <View style={{ marginTop: 6 }}>
             <Button
               mode="outlined"

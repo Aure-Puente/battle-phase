@@ -7,6 +7,70 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { db } from "../firebase/firebase";
 
 //JS:
+// Rangos
+const RANGES = [
+  { key: "FUN", label: "FUN", color: "#FF4D4D" },
+  { key: "FUN_ELITE", label: "FUN ELITE", color: "#FF8A3D" },
+  { key: "ROGUE", label: "ROGUE", color: "#FFD166" },
+  { key: "ROGUE_ELITE", label: "ROGUE ELITE", color: "#2ED47A" },
+  { key: "META", label: "META", color: "#2DA8FF" },
+  { key: "DOMINANTE", label: "DOMINANTE", color: "#8B5CF6" },
+];
+
+const clamp01 = (n) => Math.max(0, Math.min(1, n));
+const hexToRgb = (hex) => {
+  const h = String(hex || "").replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return { r, g, b };
+  }
+  if (h.length === 6) {
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  return { r: 0, g: 0, b: 0 };
+};
+const rgbToHex = ({ r, g, b }) => {
+  const hx = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${hx(r)}${hx(g)}${hx(b)}`;
+};
+const mixHex = (a, b, t) => {
+  const tt = clamp01(t);
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  return rgbToHex({
+    r: A.r + (B.r - A.r) * tt,
+    g: A.g + (B.g - A.g) * tt,
+    b: A.b + (B.b - A.b) * tt,
+  });
+};
+
+const getRangeMeta = (deck) => {
+  const key = deck?.rango || null;
+  const found = key ? RANGES.find((r) => r.key === key) : null;
+  if (found) return found;
+
+  if (deck?.rangoLabel || deck?.rangoColor) {
+    return {
+      key: key || "CUSTOM",
+      label: deck?.rangoLabel || "Rango",
+      color: deck?.rangoColor || "#6B7280",
+    };
+  }
+
+  return null;
+};
+
+const getRangeChipStyle = (theme, rangeColor) => {
+  const bg = mixHex(theme.colors.surfaceVariant, rangeColor, 0.18);
+  const border = mixHex(theme.colors.outline, rangeColor, 0.35);
+  return { bg, border };
+};
+
 function LivesBadge({ lives = 2, theme }) {
   return (
     <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -88,6 +152,11 @@ function DeckSide({ deck, side, selected, theme }) {
     ? theme.colors.surface
     : theme.colors.surface;
 
+  const rangeMeta = getRangeMeta(deck);
+  const rangeLabel = rangeMeta?.label || "—";
+  const rangeColor = rangeMeta?.color || theme.colors.onSurfaceVariant;
+  const rangeChip = rangeMeta ? getRangeChipStyle(theme, rangeColor) : null;
+
   return (
     <Card
       mode="contained"
@@ -101,7 +170,6 @@ function DeckSide({ deck, side, selected, theme }) {
       }}
     >
       <Card.Content style={{ paddingVertical: 14, gap: 10 }}>
-        {/* Header mini */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <MaterialCommunityIcons
             name={side === "top" ? "chevron-up" : "chevron-down"}
@@ -127,9 +195,7 @@ function DeckSide({ deck, side, selected, theme }) {
           ) : null}
         </View>
 
-        {/* Row: imagen + info */}
         <View style={{ flexDirection: "row", gap: 25, alignItems: "center" }}>
-          {/* Imagen */}
           <View
             style={{
               height: 150,
@@ -142,7 +208,7 @@ function DeckSide({ deck, side, selected, theme }) {
               alignItems: "center",
               justifyContent: "center",
               marginTop: 7,
-              marginBottom:7
+              marginBottom: 7,
             }}
           >
             {deck.insigniaResolvedUrl ? (
@@ -161,16 +227,40 @@ function DeckSide({ deck, side, selected, theme }) {
             )}
           </View>
 
-          {/* Info */}
           <View style={{ flex: 1, gap: 15 }}>
             <Text style={{ fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
               {deck.name || "Deck"}
             </Text>
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-              <DuelChip theme={theme} icon="sword" tone="blue">
-                {typeof deck.power === "number" ? `Fuerza: ${deck.power}` : "Fuerza: —"}
-              </DuelChip>
+              <Chip
+                compact
+                icon={() => (
+                  <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons
+                      name="shield-star-outline"
+                      size={14}
+                      color={rangeColor}
+                      style={{ marginTop: 1 }}
+                    />
+                  </View>
+                )}
+                style={{
+                  backgroundColor: rangeMeta ? rangeChip.bg : theme.colors.surfaceVariant,
+                  borderWidth: 1,
+                  borderColor: rangeMeta ? rangeChip.border : theme.colors.outline,
+                  height: 28,
+                }}
+                contentStyle={{
+                  height: 28,
+                  paddingHorizontal: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                textStyle={{ color: theme.colors.onSurface, fontWeight: "900", fontSize: 12, lineHeight: 14 }}
+              >
+                {rangeLabel}
+              </Chip>
             </View>
 
             <LivesBadge lives={deck.lives ?? 2} theme={theme} />
@@ -185,11 +275,9 @@ export default function VersusScreen({ route, navigation }) {
   const theme = useTheme();
   const { leftDeck, rightDeck } = route.params || {};
 
-  const [winnerSide, setWinnerSide] = useState(null); 
+  const [winnerSide, setWinnerSide] = useState(null);
   const [saving, setSaving] = useState(false);
-
   const [confirmOpen, setConfirmOpen] = useState(false);
-
 
   const leftEliminated = (leftDeck?.lives ?? 2) <= 0 || leftDeck?.eliminated;
   const rightEliminated = (rightDeck?.lives ?? 2) <= 0 || rightDeck?.eliminated;
@@ -251,13 +339,12 @@ export default function VersusScreen({ route, navigation }) {
           <DeckSide deck={leftDeck} side="top" selected={winnerSide === "left"} theme={theme} />
         </Pressable>
 
-        {/* VS */}
         <View style={{ alignItems: "center", justifyContent: "center", gap: 8 }}>
           <View
             style={{
               width: 56,
               height: 56,
-              borderRadius: 16, 
+              borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
@@ -269,12 +356,10 @@ export default function VersusScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* BOTTOM deck */}
         <Pressable onPress={() => onPickWinner("right")} disabled={!canPickRight || saving}>
           <DeckSide deck={rightDeck} side="bottom" selected={winnerSide === "right"} theme={theme} />
         </Pressable>
 
-        {/* Info mini */}
         {loserSide ? (
           <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
             Perdedor:{" "}
@@ -292,7 +377,7 @@ export default function VersusScreen({ route, navigation }) {
           onDismiss={() => setConfirmOpen(false)}
           style={{
             backgroundColor: theme.colors.surface,
-            borderRadius: 12, 
+            borderRadius: 12,
             borderWidth: 1,
             borderColor: theme.colors.outline,
           }}

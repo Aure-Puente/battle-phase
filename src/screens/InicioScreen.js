@@ -8,6 +8,71 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { auth, db } from "../firebase/firebase";
 
 //JS:
+//Rangos
+const RANGES = [
+  { key: "FUN", label: "FUN", color: "#FF4D4D" },
+  { key: "FUN_ELITE", label: "FUN ELITE", color: "#FF8A3D" },
+  { key: "ROGUE", label: "ROGUE", color: "#FFD166" },
+  { key: "ROGUE_ELITE", label: "ROGUE ELITE", color: "#2ED47A" },
+  { key: "META", label: "META", color: "#2DA8FF" },
+  { key: "DOMINANTE", label: "DOMINANTE", color: "#8B5CF6" },
+];
+
+const clamp01 = (n) => Math.max(0, Math.min(1, n));
+const hexToRgb = (hex) => {
+  const h = String(hex || "").replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return { r, g, b };
+  }
+  if (h.length === 6) {
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  return { r: 0, g: 0, b: 0 };
+};
+const rgbToHex = ({ r, g, b }) => {
+  const hx = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${hx(r)}${hx(g)}${hx(b)}`;
+};
+const mixHex = (a, b, t) => {
+  const tt = clamp01(t);
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  return rgbToHex({
+    r: A.r + (B.r - A.r) * tt,
+    g: A.g + (B.g - A.g) * tt,
+    b: A.b + (B.b - A.b) * tt,
+  });
+};
+
+const getRangeMeta = (deck) => {
+  const key = deck?.rango || null;
+  const byKey = key ? RANGES.find((r) => r.key === key) : null;
+  if (byKey) return byKey;
+
+  if (deck?.rangoLabel || deck?.rangoColor) {
+    return {
+      key: key || "CUSTOM",
+      label: deck?.rangoLabel || "Rango",
+      color: deck?.rangoColor || "#6B7280",
+    };
+  }
+
+  return null;
+};
+
+const getRangeChipStyle = (theme, rangeColor) => {
+  const bg = mixHex(theme.colors.surfaceVariant, rangeColor, 0.18);
+  const border = mixHex(theme.colors.outline, rangeColor, 0.35);
+  return { bg, border };
+};
+
+//JS:
 const PLAYERS = [
   { key: "benja", label: "Benja", uid: "VTo2TZ93t7WQANYP9Fao2sFEops1" },
   { key: "aure", label: "Aure", uid: "sW53hw9EdVXDIJMI3BnPTcYRbAn1" },
@@ -46,11 +111,7 @@ function DeckThumb({ uri, theme }) {
       {uri ? (
         <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
       ) : (
-        <MaterialCommunityIcons
-          name="image-off-outline"
-          size={22}
-          color={theme.colors.onSurfaceVariant}
-        />
+        <MaterialCommunityIcons name="image-off-outline" size={22} color={theme.colors.onSurfaceVariant} />
       )}
     </View>
   );
@@ -103,10 +164,7 @@ function DuelLoading({ theme, label = "Cargando resumen..." }) {
             <MaterialCommunityIcons name="cards" size={52} color={theme.colors.primary} />
           </Animated.View>
 
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "900", fontSize: 16 }}>
-            {label}
-          </Text>
-
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "900", fontSize: 16 }}>{label}</Text>
           <Text style={{ color: theme.colors.onSurfaceVariant }}>Sincronizando datos…</Text>
         </Card.Content>
       </Card>
@@ -137,8 +195,9 @@ export default function InicioScreen({ navigation }) {
   const [tournament, setTournament] = useState({
     lastChampionUid: null,
     lastOpponentUid: null,
-    deadlineAt: null, // ms
+    deadlineAt: null,
   });
+
   const [decksReadyCount, setDecksReadyCount] = useState(0);
   const decksFirstShotByUidRef = useRef(new Set());
   const [tournamentReady, setTournamentReady] = useState(false);
@@ -169,11 +228,7 @@ export default function InicioScreen({ navigation }) {
     setTournament((t) => ({ ...t, deadlineAt: deadlineMs }));
 
     try {
-      await setDoc(
-        doc(db, TOURNAMENT_DOC.col, TOURNAMENT_DOC.id),
-        { deadlineAt: new Date(deadlineMs) },
-        { merge: true }
-      );
+      await setDoc(doc(db, TOURNAMENT_DOC.col, TOURNAMENT_DOC.id), { deadlineAt: new Date(deadlineMs) }, { merge: true });
     } catch (e) {
       console.log("Error set deadlineAt:", e);
       setTournament((t) => ({ ...t, deadlineAt: null }));
@@ -186,11 +241,7 @@ export default function InicioScreen({ navigation }) {
     setTournament((t) => ({ ...t, deadlineAt: null }));
 
     try {
-      await setDoc(
-        doc(db, TOURNAMENT_DOC.col, TOURNAMENT_DOC.id),
-        { deadlineAt: null },
-        { merge: true }
-      );
+      await setDoc(doc(db, TOURNAMENT_DOC.col, TOURNAMENT_DOC.id), { deadlineAt: null }, { merge: true });
     } catch (e) {
       console.log("Error stop deadlineAt:", e);
       setTimerError("No se pudo detener el timer (revisá reglas de Firestore).");
@@ -237,6 +288,9 @@ export default function InicioScreen({ navigation }) {
                     : typeof x.fuerza === "number"
                     ? x.fuerza
                     : null,
+                rango: x.rango ?? null,
+                rangoLabel: x.rangoLabel ?? null,
+                rangoColor: x.rangoColor ?? null,
                 lives: typeof x.lives === "number" ? x.lives : 2,
                 eliminated: !!x.eliminated,
                 isCurrentChampion: !!x.isCurrentChampion,
@@ -288,9 +342,7 @@ export default function InicioScreen({ navigation }) {
     return () => unsub && unsub();
   }, []);
 
-  const aliveDecks = useMemo(() => {
-    return decks.filter((d) => (typeof d.lives === "number" ? d.lives : 2) > 0);
-  }, [decks]);
+  const aliveDecks = useMemo(() => decks.filter((d) => (typeof d.lives === "number" ? d.lives : 2) > 0), [decks]);
 
   const aliveCountByUid = useMemo(() => {
     const m = new Map();
@@ -336,9 +388,7 @@ export default function InicioScreen({ navigation }) {
     return champs[0];
   }, [aliveDecks]);
 
-  const alivePlayers = useMemo(() => {
-    return PLAYERS.filter((p) => (aliveByUid.get(p.uid) || []).length > 0);
-  }, [aliveByUid]);
+  const alivePlayers = useMemo(() => PLAYERS.filter((p) => (aliveByUid.get(p.uid) || []).length > 0), [aliveByUid]);
 
   const prevOpponentUid = useMemo(() => {
     if (!champion) return null;
@@ -416,7 +466,6 @@ export default function InicioScreen({ navigation }) {
       contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 12 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header + Logout */}
       <View style={{ gap: 6 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text variant="headlineLarge" style={{ fontWeight: "900", flex: 1 }}>
@@ -444,7 +493,6 @@ export default function InicioScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Decks restantes + ventaja */}
       <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
         <Card.Content style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -476,7 +524,6 @@ export default function InicioScreen({ navigation }) {
         </Card.Content>
       </Card>
 
-      {/* Timer del duelo */}
       <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
         <Card.Content style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -512,7 +559,6 @@ export default function InicioScreen({ navigation }) {
         </Card.Content>
       </Card>
 
-      {/* Siguiente pelea */}
       <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
         <Card.Content style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -539,19 +585,58 @@ export default function InicioScreen({ navigation }) {
             >
               <Text style={{ color: theme.colors.onSurfaceVariant }}>{nextFight.note}</Text>
 
-              {/* Deck A */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <DeckThumb uri={nextFight.a.insigniaResolvedUrl} theme={theme} />
                 <View style={{ flex: 1, gap: 6 }}>
                   <Text style={{ fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
                     “{nextFight.a.name}”
                   </Text>
+
                   <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                    {(() => {
+                      const meta = getRangeMeta(nextFight.a);
+                      const label = meta?.label || "—";
+                      const color = meta?.color || theme.colors.onSurfaceVariant;
+                      const { bg, border } = meta
+                        ? getRangeChipStyle(theme, color)
+                        : { bg: theme.colors.surfaceVariant, border: theme.colors.outline };
+
+                      return (
+                        <Chip
+                          compact
+                          icon={() => (
+                            <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+                              <MaterialCommunityIcons
+                                name="shield-star-outline"
+                                size={14}
+                                color={color}
+                                style={{ marginTop: 1 }}
+                              />
+                            </View>
+                          )}
+                          style={[
+                            chipStyle,
+                            {
+                              height: 28,
+                              backgroundColor: meta ? bg : theme.colors.surfaceVariant,
+                              borderColor: meta ? border : theme.colors.outline,
+                            },
+                          ]}
+                          contentStyle={{
+                            height: 28,
+                            paddingHorizontal: 8,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          textStyle={[chipText, { fontSize: 12, lineHeight: 14 }]}
+                        >
+                          {label}
+                        </Chip>
+                      );
+                    })()}
+
                     <Chip icon="heart" compact style={chipStyle} textStyle={chipText}>
                       Vidas: {nextFight.a.lives}
-                    </Chip>
-                    <Chip icon="sword" compact style={chipStyle} textStyle={chipText}>
-                      Fuerza: {typeof nextFight.a.power === "number" ? nextFight.a.power : "—"}
                     </Chip>
                   </View>
                 </View>
@@ -567,17 +652,7 @@ export default function InicioScreen({ navigation }) {
                   marginVertical: 6,
                 }}
               >
-                {/* Línea izquierda */}
-                <View
-                  style={{
-                    flex: 1,
-                    height: 1,
-                    backgroundColor: theme.colors.primary,
-                    opacity: 0.7,
-                  }}
-                />
-
-                {/* Caja VS */}
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.primary, opacity: 0.7 }} />
                 <View
                   style={{
                     width: 46,
@@ -592,31 +667,61 @@ export default function InicioScreen({ navigation }) {
                 >
                   <Text style={{ fontWeight: "900", fontSize: 16 }}>VS</Text>
                 </View>
-
-                {/* Línea derecha */}
-                <View
-                  style={{
-                    flex: 1,
-                    height: 1,
-                    backgroundColor: theme.colors.primary,
-                    opacity: 0.7,
-                  }}
-                />
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.primary, opacity: 0.7 }} />
               </View>
 
-              {/* Deck B */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <DeckThumb uri={nextFight.b.insigniaResolvedUrl} theme={theme} />
                 <View style={{ flex: 1, gap: 6 }}>
                   <Text style={{ fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
                     “{nextFight.b.name}”
                   </Text>
+
                   <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                    {(() => {
+                      const meta = getRangeMeta(nextFight.b);
+                      const label = meta?.label || "—";
+                      const color = meta?.color || theme.colors.onSurfaceVariant;
+                      const { bg, border } = meta
+                        ? getRangeChipStyle(theme, color)
+                        : { bg: theme.colors.surfaceVariant, border: theme.colors.outline };
+
+                      return (
+                        <Chip
+                          compact
+                          icon={() => (
+                            <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+                              <MaterialCommunityIcons
+                                name="shield-star-outline"
+                                size={14}
+                                color={color}
+                                style={{ marginTop: 1 }}
+                              />
+                            </View>
+                          )}
+                          style={[
+                            chipStyle,
+                            {
+                              height: 28,
+                              backgroundColor: meta ? bg : theme.colors.surfaceVariant,
+                              borderColor: meta ? border : theme.colors.outline,
+                            },
+                          ]}
+                          contentStyle={{
+                            height: 28,
+                            paddingHorizontal: 8,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          textStyle={[chipText, { fontSize: 12, lineHeight: 14 }]}
+                        >
+                          {label}
+                        </Chip>
+                      );
+                    })()}
+
                     <Chip icon="heart" compact style={chipStyle} textStyle={chipText}>
                       Vidas: {nextFight.b.lives}
-                    </Chip>
-                    <Chip icon="sword" compact style={chipStyle} textStyle={chipText}>
-                      Fuerza: {typeof nextFight.b.power === "number" ? nextFight.b.power : "—"}
                     </Chip>
                   </View>
                 </View>

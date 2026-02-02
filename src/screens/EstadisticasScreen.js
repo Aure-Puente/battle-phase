@@ -89,6 +89,7 @@ export default function EstadisticasScreen() {
 
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const intro = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     intro.setValue(0);
@@ -142,7 +143,7 @@ export default function EstadisticasScreen() {
       }
     }
 
-    return PLAYERS.map((p) => {
+    const computed = PLAYERS.map((p) => {
       const row = byUid.get(p.uid);
 
       if (row.decksConRango > 0) {
@@ -161,6 +162,14 @@ export default function EstadisticasScreen() {
         avgLabel: "—",
         color: "#6B7280",
       };
+    });
+
+    // Orden por promedio (mejor arriba). Los que no tienen data, al final.
+    return computed.sort((a, b) => {
+      const aa = typeof a.avgScore === "number" ? a.avgScore : -1;
+      const bb = typeof b.avgScore === "number" ? b.avgScore : -1;
+      if (bb !== aa) return bb - aa;
+      return String(a.label).localeCompare(String(b.label));
     });
   }, [decks]);
 
@@ -252,7 +261,6 @@ export default function EstadisticasScreen() {
       contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 14 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <Animated.View
         style={{
           gap: 6,
@@ -308,17 +316,19 @@ export default function EstadisticasScreen() {
             </View>
           </View>
 
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
-            Se promedian los rangos de los decks (0 = Fun, 5 = Dominante). Los decks sin rango no cuentan.
-          </Text>
+<Text style={{ color: theme.colors.onSurfaceVariant }}>
+  Se promedian los rangos de los decks. Los decks sin rango no cuentan. 
+  El “Nivel” se obtiene redondeando el promedio al rango más cercano.
+</Text>
+
         </Card.Content>
       </Card>
 
-      {/* Cards por jugador */}
       {stats.map((row, idx) => {
         const hasData = row.decksConRango > 0 && row.avgScore != null;
         const orbColor = row.color;
         const levelLabel = hasData ? row.avgLabel : "—";
+        const avgText = hasData ? row.avgScore.toFixed(2) : "—";
 
         return (
           <Animated.View
@@ -349,10 +359,19 @@ export default function EstadisticasScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                   <Circle color={orbColor} isEmpty={!hasData} delay={140 + idx * 120} />
 
-                  <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flex: 1, gap: 6 }}>
                     <Text style={{ fontWeight: "900", fontSize: 20, color: theme.colors.onSurface }}>
                       {row.label}
                     </Text>
+
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                        Promedio:{" "}
+                        <Text style={{ fontWeight: "900", color: theme.colors.onSurface }}>
+                          {avgText}
+                        </Text>
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={{ alignItems: "flex-end" }}>
