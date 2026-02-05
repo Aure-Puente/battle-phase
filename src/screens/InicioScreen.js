@@ -81,6 +81,7 @@ const PLAYERS = [
 
 const TOURNAMENT_DOC = { col: "tournaments", id: "survival_extra_life" };
 
+// ✅ Orden interno que ya usabas (para elegir “el más débil” para pelear)
 function compareDeck(a, b) {
   const la = typeof a.lives === "number" ? a.lives : 2;
   const lb = typeof b.lives === "number" ? b.lives : 2;
@@ -90,6 +91,14 @@ function compareDeck(a, b) {
   const pb = typeof b.power === "number" ? b.power : Number.POSITIVE_INFINITY;
   if (pa !== pb) return pa - pb;
 
+  return String(a.name || "").localeCompare(String(b.name || ""));
+}
+
+// ✅ Orden para “top por fuerza” (desc)
+function comparePowerDesc(a, b) {
+  const pa = typeof a.power === "number" && Number.isFinite(a.power) ? a.power : -Infinity;
+  const pb = typeof b.power === "number" && Number.isFinite(b.power) ? b.power : -Infinity;
+  if (pa !== pb) return pb - pa;
   return String(a.name || "").localeCompare(String(b.name || ""));
 }
 
@@ -342,7 +351,36 @@ export default function InicioScreen({ navigation }) {
     return () => unsub && unsub();
   }, []);
 
-  const aliveDecks = useMemo(() => decks.filter((d) => (typeof d.lives === "number" ? d.lives : 2) > 0), [decks]);
+  /**
+   * ✅ CLAVE:
+   * - Tomamos SIEMPRE los TOP 15 por jugador (por fuerza DESC)
+   * - Y además ignoramos decks sin fuerza (power no numérico)
+   * => Si agregás decks nuevos sin fuerza, no entran.
+   * => Si agregás decks nuevos con fuerza, podrían desplazar a otro del top 15 (porque es por ranking).
+   */
+  const tournamentDecks = useMemo(() => {
+    const byUid = new Map(PLAYERS.map((p) => [p.uid, []]));
+
+    for (const d of decks) {
+      if (!byUid.has(d.ownerUid)) continue;
+      if (!(typeof d.power === "number" && Number.isFinite(d.power))) continue; // solo con fuerza
+      byUid.get(d.ownerUid).push(d);
+    }
+
+    const picked = [];
+    for (const p of PLAYERS) {
+      const list = byUid.get(p.uid) || [];
+      list.sort(comparePowerDesc);          // top por fuerza
+      picked.push(...list.slice(0, 15));    // ✅ 15 POR jugador
+    }
+
+    return picked;
+  }, [decks]);
+
+  const aliveDecks = useMemo(
+    () => tournamentDecks.filter((d) => (typeof d.lives === "number" ? d.lives : 2) > 0),
+    [tournamentDecks]
+  );
 
   const aliveCountByUid = useMemo(() => {
     const m = new Map();
@@ -370,7 +408,7 @@ export default function InicioScreen({ navigation }) {
       m.get(d.ownerUid).push(d);
     }
     for (const [uid, list] of m.entries()) {
-      list.sort(compareDeck);
+      list.sort(compareDeck); // tu lógica para elegir qué deck pelea
       m.set(uid, list);
     }
     return m;
@@ -401,12 +439,12 @@ export default function InicioScreen({ navigation }) {
       return tournament.lastOpponentUid;
     }
 
-    const others = decks
+    const others = tournamentDecks
       .filter((d) => d.ownerUid !== champion.ownerUid && d.updatedAt)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     return others[0]?.ownerUid || null;
-  }, [champion, tournament.lastChampionUid, tournament.lastOpponentUid, decks]);
+  }, [champion, tournament.lastChampionUid, tournament.lastOpponentUid, tournamentDecks]);
 
   const nextFight = useMemo(() => {
     if (alivePlayers.length < 2) return null;
@@ -476,9 +514,7 @@ export default function InicioScreen({ navigation }) {
             mode="outlined"
             onPress={onLogout}
             compact
-            icon={({ color, size }) => (
-              <MaterialCommunityIcons name="logout" color={color} size={18} />
-            )}
+            icon={({ color, size }) => <MaterialCommunityIcons name="logout" color={color} size={18} />}
             style={{ borderRadius: 14, borderWidth: 1, borderColor: theme.colors.outline }}
             contentStyle={{ height: 36 }}
             labelStyle={{ fontWeight: "900" }}
@@ -493,6 +529,7 @@ export default function InicioScreen({ navigation }) {
         </View>
       </View>
 
+      {/* Decks restantes (✅ ahora es TOP 15 por jugador con fuerza) */}
       <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
         <Card.Content style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -524,41 +561,7 @@ export default function InicioScreen({ navigation }) {
         </Card.Content>
       </Card>
 
-      <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
-        <Card.Content style={{ gap: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <MaterialCommunityIcons name="calendar-clock" size={22} color={theme.colors.primary} />
-            <Text variant="titleLarge" style={{ fontWeight: "900" }}>
-              Tiempo del duelo
-            </Text>
-
-            <Chip compact style={[chipStyle, { marginLeft: "auto" }]} textStyle={chipText} icon="timer-sand">
-              7 días
-            </Chip>
-          </View>
-
-          {tournament.deadlineAt ? (
-            <Chip compact icon="timer-sand" style={chipStyle} textStyle={chipText}>
-              Tiempo restante: {msToClock(remainingMs)}
-            </Chip>
-          ) : (
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>No iniciado</Text>
-          )}
-
-          {timerError ? <Text style={{ color: theme.colors.onSurfaceVariant }}>{timerError}</Text> : null}
-
-          <Chip compact icon="play-circle-outline" style={chipStyle2} textStyle={chipText} onPress={startDuelTimer}>
-            Iniciar / Reiniciar
-          </Chip>
-
-          {tournament.deadlineAt ? (
-            <Chip compact icon="stop-circle-outline" style={chipStyle} textStyle={chipText} onPress={stopDuelTimer}>
-              Detener cuenta regresiva
-            </Chip>
-          ) : null}
-        </Card.Content>
-      </Card>
-
+      {/* Siguiente pelea */}
       <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
         <Card.Content style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -606,12 +609,7 @@ export default function InicioScreen({ navigation }) {
                           compact
                           icon={() => (
                             <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
-                              <MaterialCommunityIcons
-                                name="shield-star-outline"
-                                size={14}
-                                color={color}
-                                style={{ marginTop: 1 }}
-                              />
+                              <MaterialCommunityIcons name="shield-star-outline" size={14} color={color} style={{ marginTop: 1 }} />
                             </View>
                           )}
                           style={[
@@ -691,12 +689,7 @@ export default function InicioScreen({ navigation }) {
                           compact
                           icon={() => (
                             <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
-                              <MaterialCommunityIcons
-                                name="shield-star-outline"
-                                size={14}
-                                color={color}
-                                style={{ marginTop: 1 }}
-                              />
+                              <MaterialCommunityIcons name="shield-star-outline" size={14} color={color} style={{ marginTop: 1 }} />
                             </View>
                           )}
                           style={[
@@ -728,6 +721,42 @@ export default function InicioScreen({ navigation }) {
               </View>
             </View>
           )}
+        </Card.Content>
+      </Card>
+
+      {/* Tiempo del duelo (abajo) */}
+      <Card mode="contained" style={{ borderRadius: 18, borderWidth: 1, borderColor: theme.colors.outline }}>
+        <Card.Content style={{ gap: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <MaterialCommunityIcons name="calendar-clock" size={22} color={theme.colors.primary} />
+            <Text variant="titleLarge" style={{ fontWeight: "900" }}>
+              Tiempo del duelo
+            </Text>
+
+            <Chip compact style={[chipStyle, { marginLeft: "auto" }]} textStyle={chipText} icon="timer-sand">
+              7 días
+            </Chip>
+          </View>
+
+          {tournament.deadlineAt ? (
+            <Chip compact icon="timer-sand" style={chipStyle} textStyle={chipText}>
+              Tiempo restante: {msToClock(remainingMs)}
+            </Chip>
+          ) : (
+            <Text style={{ color: theme.colors.onSurfaceVariant }}>No iniciado</Text>
+          )}
+
+          {timerError ? <Text style={{ color: theme.colors.onSurfaceVariant }}>{timerError}</Text> : null}
+
+          <Chip compact icon="play-circle-outline" style={chipStyle2} textStyle={chipText} onPress={startDuelTimer}>
+            Iniciar / Reiniciar
+          </Chip>
+
+          {tournament.deadlineAt ? (
+            <Chip compact icon="stop-circle-outline" style={chipStyle} textStyle={chipText} onPress={stopDuelTimer}>
+              Detener cuenta regresiva
+            </Chip>
+          ) : null}
         </Card.Content>
       </Card>
     </ScrollView>

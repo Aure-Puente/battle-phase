@@ -303,9 +303,6 @@ export default function HistorialScreen() {
                   </Text>
 
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                    <Chip compact icon="magnify" style={chipStyle} textStyle={chipTextStyle}>
-                      Ver grande
-                    </Chip>
                     <Chip compact icon="trophy" style={chipStyle} textStyle={chipTextStyle}>
                       Campeón
                     </Chip>
