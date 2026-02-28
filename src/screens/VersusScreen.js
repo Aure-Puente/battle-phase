@@ -146,16 +146,14 @@ function DeckSide({ deck, side, selected, theme }) {
     ? theme.colors.primary
     : theme.colors.outline;
 
-  const bg = eliminated
-    ? theme.colors.surfaceVariant
-    : selected
-    ? theme.colors.surface
-    : theme.colors.surface;
+  const bg = eliminated ? theme.colors.surfaceVariant : theme.colors.surface;
 
   const rangeMeta = getRangeMeta(deck);
   const rangeLabel = rangeMeta?.label || "—";
   const rangeColor = rangeMeta?.color || theme.colors.onSurfaceVariant;
   const rangeChip = rangeMeta ? getRangeChipStyle(theme, rangeColor) : null;
+  const nameNorm = String(deck?.name || "").trim().toLowerCase();
+  const isCementerio = nameNorm === "cementerio de dragones";
 
   return (
     <Card
@@ -232,6 +230,7 @@ function DeckSide({ deck, side, selected, theme }) {
               {deck.name || "Deck"}
             </Text>
 
+            {/* Rango + coronita (a la derecha) */}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <Chip
                 compact
@@ -261,6 +260,23 @@ function DeckSide({ deck, side, selected, theme }) {
               >
                 {rangeLabel}
               </Chip>
+
+              {isCementerio && !eliminated && (
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.outline,
+                    backgroundColor: theme.colors.surfaceVariant,
+                  }}
+                >
+                  <MaterialCommunityIcons name="crown-outline" size={16} color={theme.colors.tertiary} />
+                </View>
+              )}
             </View>
 
             <LivesBadge lives={deck.lives ?? 2} theme={theme} />
