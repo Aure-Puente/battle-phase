@@ -1,7 +1,7 @@
 //Importaciones:
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
+import { Animated, Easing, ScrollView, View } from "react-native";
 import { Button, Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { auth } from "../firebase/firebase";
@@ -20,9 +20,6 @@ export default function DecksScreen({ navigation }) {
 
   const others = useMemo(() => PLAYERS.filter((p) => p.uid !== myUid), [myUid]);
 
-  // =========================
-  // Animación de entrada
-  // =========================
   const enterOpacity = useRef(new Animated.Value(0)).current;
   const enterY = useRef(new Animated.Value(10)).current;
   const enterScale = useRef(new Animated.Value(0.985)).current;
@@ -69,11 +66,15 @@ export default function DecksScreen({ navigation }) {
     navigation.navigate("DeckList", { ownerId: player.uid, titulo: `${player.label} Decks` });
   };
 
+  const goCardSelector = () => {
+    navigation.navigate("CardSelector");
+  };
+
   const BigButton = ({ mode, icon, label, onPress }) => (
     <Button
       mode={mode}
       onPress={onPress}
-      contentStyle={{ height: 62 }} // ⬅️ más alto
+      contentStyle={{ height: 62 }}
       labelStyle={{ fontSize: 16, fontWeight: "900" }}
       style={{
         borderRadius: 18,
@@ -95,7 +96,15 @@ export default function DecksScreen({ navigation }) {
         backgroundColor: theme.colors.background,
       }}
     >
-      <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: 28,
+          flexGrow: 1,
+          justifyContent: "center",
+        }}
+        showsVerticalScrollIndicator={false}
+      >
         <Card
           mode="contained"
           style={{
@@ -107,11 +116,10 @@ export default function DecksScreen({ navigation }) {
           }}
         >
           <Card.Content style={{ paddingTop: 22, paddingBottom: 22, gap: 16 }}>
-            {/* Header */}
             <View style={{ gap: 10, alignItems: "center" }}>
               <View
                 style={{
-                  width: 58, 
+                  width: 58,
                   height: 58,
                   borderRadius: 18,
                   alignItems: "center",
@@ -135,14 +143,11 @@ export default function DecksScreen({ navigation }) {
                   lineHeight: 18,
                 }}
               >
-                Elegí qué colección querés ver. Podés entrar a la tuya o revisar las de los demás.
-              </Text>
+              Acá podés ver y gestionar tus decks o explorar las colecciones de otros jugadores.</Text>
             </View>
 
-            {/* Divider */}
             <Divider />
 
-            {/* Botones */}
             <View style={{ gap: 14, marginTop: 2 }}>
               <BigButton mode="contained" icon="cards" label="Mis Decks" onPress={goMyDecks} />
 
@@ -155,34 +160,65 @@ export default function DecksScreen({ navigation }) {
                   onPress={() => goPlayerDecks(p)}
                 />
               ))}
-            </View>
 
-            <View
-              style={{
-                marginTop: 6,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.outline,
-                backgroundColor: theme.colors.surfaceVariant,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <MaterialCommunityIcons
-                name="sort-variant"
-                size={18}
-                color={theme.colors.primary}
-              />
-              <Text style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
-                Las listas se ordenan por rango (mayor arriba). Los decks sin rango quedan al final.
-              </Text>
+              <View
+                style={{
+                  marginTop: 10,
+                  padding: 14,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: theme.colors.outline,
+                  backgroundColor: theme.colors.surfaceVariant,
+                  gap: 12,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 14,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.outline,
+                    }}
+                  >
+                    <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.primary} />
+                  </View>
+
+                  <Text style={{ fontWeight: "900", fontSize: 15 }}>
+                    Buscar cartas
+                  </Text>
+                </View>
+
+                <Text
+                  style={{
+                    color: theme.colors.onSurfaceVariant,
+                    lineHeight: 18,
+                  }}
+                >
+                  Explorá todas las cartas disponibles para consultar información rápidamente.
+                </Text>
+
+                <Button
+                  mode="contained"
+                  onPress={goCardSelector}
+                  style={{
+                    borderRadius: 14,
+                  }}
+                  contentStyle={{ height: 48 }}
+                  labelStyle={{ fontWeight: "900" }}
+                  icon="arrow-right"
+                >
+                  Abrir buscador
+                </Button>
+              </View>
             </View>
           </Card.Content>
         </Card>
-      </View>
+      </ScrollView>
     </Animated.View>
   );
 }

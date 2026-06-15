@@ -1,6 +1,7 @@
 //Importaciones:
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTheme } from "react-native-paper";
+import CardSelectorScreen from "../screens/CardSelectorScreen";
 import DeckCreateScreen from "../screens/DeckCreateScreen";
 import DeckEditScreen from "../screens/DeckEditScreen";
 import DeckListScreen from "../screens/DeckListScreen";
@@ -20,14 +21,34 @@ export default function DecksStack() {
         headerTitleStyle: { fontWeight: "700" },
       }}
     >
-      <Stack.Screen name="DecksHome" component={DecksScreen}  options={{ headerShown: false }}/>
-      <Stack.Screen name="DeckList" component={DeckListScreen}  options={{ headerShown: false }} />
-      <Stack.Screen name="DeckCreate" component={DeckCreateScreen}  options={{ headerShown: false }} />
+      <Stack.Screen
+        name="DecksHome"
+        component={DecksScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="DeckList"
+        component={DeckListScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="DeckCreate"
+        component={DeckCreateScreen}
+        options={{ headerShown: false }}
+      />
 
       <Stack.Screen
         name="DeckEdit"
         component={DeckEditScreen}
-        options={{headerShown: false , presentation: "modal" }}
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+
+      <Stack.Screen
+        name="CardSelector"
+        component={CardSelectorScreen}
+        options={{ headerShown: false, presentation: "modal" }}
       />
     </Stack.Navigator>
   );

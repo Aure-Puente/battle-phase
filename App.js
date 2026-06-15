@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 // App.js
 import { DarkTheme as NavDarkTheme, NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
